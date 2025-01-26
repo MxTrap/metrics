@@ -8,22 +8,22 @@ import (
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
 )
 
-type HttpServer struct {
+type HTTPServer struct {
 	mux  *http.ServeMux
 	host string
 }
 
-func New(cfg config.HttpConfig, service handlers.MetricsSaver) *HttpServer {
+func New(cfg config.HTTPConfig, service handlers.MetricsSaver) *HTTPServer {
 	mux := http.NewServeMux()
 	handler := handlers.NewHandler(service)
 	mux.HandleFunc("/", handler.Save)
 
-	return &HttpServer{
+	return &HTTPServer{
 		mux:  mux,
 		host: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
 }
 
-func (h HttpServer) Run() {
+func (h HTTPServer) Run() {
 	http.ListenAndServe(h.host, h.mux)
 }

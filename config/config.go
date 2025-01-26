@@ -1,17 +1,17 @@
 package config
 
-type HttpConfig struct {
+type HTTPConfig struct {
 	Host string
 	Port int16
 }
 
 type Config struct {
-	Http HttpConfig
+	HTTP HTTPConfig
 }
 
 func LoadConfig() *Config {
 	return &Config{
-		Http: HttpConfig{
+		HTTP: HTTPConfig{
 			Host: "localhost",
 			Port: 8080,
 		},

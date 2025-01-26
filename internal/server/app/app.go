@@ -7,12 +7,12 @@ import (
 )
 
 type App struct {
-	httpServer *httpserver.HttpServer
+	httpServer *httpserver.HTTPServer
 }
 
 func NewApp(cfg *config.Config) *App {
 	service := service.NewMemStorage()
-	http := httpserver.New(cfg.Http, service)
+	http := httpserver.New(cfg.HTTP, service)
 
 	return &App{
 		httpServer: http,
