@@ -5,12 +5,17 @@ type HTTPConfig struct {
 	Port int16
 }
 
-type Config struct {
+type ServerConfig struct {
 	HTTP HTTPConfig
 }
 
-func LoadConfig() *Config {
-	return &Config{
+type AgentConfig struct {
+	ServerConfig HTTPConfig
+	ClientConfig HTTPConfig
+}
+
+func LoadServerConfig() *ServerConfig {
+	return &ServerConfig{
 		HTTP: HTTPConfig{
 			Host: "localhost",
 			Port: 8080,
