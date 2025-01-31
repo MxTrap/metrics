@@ -9,7 +9,7 @@ import (
 )
 
 type HTTPClient struct {
-	serverUrl      string
+	serverURL      string
 	client         *http.Client
 	service        *service.MetricsObserverService
 	ctx            context.Context
@@ -19,7 +19,7 @@ type HTTPClient struct {
 func NewHTTPClient(
 	ctx context.Context,
 	service *service.MetricsObserverService,
-	serverUrl string,
+	serverURL string,
 	reportInterval int,
 ) *HTTPClient {
 	client := &http.Client{}
@@ -29,7 +29,7 @@ func NewHTTPClient(
 		ctx:            ctx,
 		service:        service,
 		reportInterval: reportInterval,
-		serverUrl:      serverUrl,
+		serverURL:      serverURL,
 	}
 }
 
@@ -43,11 +43,15 @@ func (h *HTTPClient) Run() {
 }
 
 func (h *HTTPClient) postMetric(metricType string, metric string, value any) {
-	_, err := h.client.Post(
-		fmt.Sprintf("http://%s/update/%s/%s/%v", h.serverUrl, metricType, metric, value),
+	resp, err := h.client.Post(
+		fmt.Sprintf("http://%s/update/%s/%s/%v", h.serverURL, metricType, metric, value),
 		"text/plain",
 		nil,
 	)
+	if err != nil {
+		return
+	}
+	err = resp.Body.Close()
 	if err != nil {
 		return
 	}
