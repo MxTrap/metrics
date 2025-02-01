@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"os"
 )
 
 type ServerConfig struct {
@@ -14,6 +15,10 @@ func LoadServerConfig() *ServerConfig {
 
 	flag.Var(httpConfig, "a", "")
 	flag.Parse()
+
+	if addr := os.Getenv("ADDRESS"); addr != "" {
+		_ = httpConfig.Set(addr)
+	}
 
 	return &ServerConfig{
 		HTTP: *httpConfig,

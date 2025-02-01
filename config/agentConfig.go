@@ -1,6 +1,10 @@
 package config
 
-import "flag"
+import (
+	"flag"
+	"os"
+	"strconv"
+)
 
 type AgentConfig struct {
 	ServerConfig   HTTPConfig
@@ -15,6 +19,24 @@ func LoadAgentConfig() *AgentConfig {
 	_ = flag.Value(httpConfig)
 	flag.Var(httpConfig, "a", "server host:port")
 	flag.Parse()
+
+	if interval := os.Getenv("REPORT_INTERVAL"); interval != "" {
+		iInterval, err := strconv.Atoi(interval)
+		if err == nil {
+			rInterval = &iInterval
+		}
+	}
+
+	if interval := os.Getenv("POLL_INTERVAL"); interval != "" {
+		iInterval, err := strconv.Atoi(interval)
+		if err == nil {
+			pInterval = &iInterval
+		}
+	}
+
+	if addr := os.Getenv("ADDRESS"); addr != "" {
+		_ = httpConfig.Set(addr)
+	}
 
 	return &AgentConfig{
 		ServerConfig:   *httpConfig,
