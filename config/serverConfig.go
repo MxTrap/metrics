@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 )
 
 type ServerConfig struct {
@@ -9,16 +10,13 @@ type ServerConfig struct {
 }
 
 func LoadServerConfig() *ServerConfig {
-	httpConfig := new(HTTPConfig)
+	httpConfig := GetDefaultHTTPConfig()
 	_ = flag.Value(httpConfig)
 
 	flag.Var(httpConfig, "a", "")
 	flag.Parse()
 
-	if httpConfig == nil {
-		dConfig := GetDefaultHTTPConfig()
-		httpConfig = &dConfig
-	}
+	fmt.Println(httpConfig, *httpConfig)
 
 	return &ServerConfig{
 		HTTP: *httpConfig,

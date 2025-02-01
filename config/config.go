@@ -11,8 +11,8 @@ type HTTPConfig struct {
 	Port int
 }
 
-func GetDefaultHTTPConfig() HTTPConfig {
-	return HTTPConfig{
+func GetDefaultHTTPConfig() *HTTPConfig {
+	return &HTTPConfig{
 		Host: "localhost",
 		Port: 8080,
 	}
