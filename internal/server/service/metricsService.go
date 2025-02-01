@@ -16,37 +16,30 @@ type Storage interface {
 	GetAll() map[string]any
 }
 
-type StorageService struct {
-	metricTypes MetricTypes
+type MetricsService struct {
+	metricTypes metricTypes
 	storage     Storage
 }
 
-type MetricTypeFunc struct {
+type metricTypes map[string]metricTypeFunc
+
+type metricTypeFunc struct {
 	ParseFunc func(str string) (any, error)
 	SaveFunc  func(metric string, value any) error
 	FindFunc  func(metric string) (any, bool)
 }
 
-type MetricTypes map[string]any
-
-func (t *MetricTypes) GetMetricFunctions(metricType string) *MetricTypeFunc {
-	if val, ok := (*t)[metricType]; ok {
-		c, ok := val.(MetricTypeFunc)
-		if !ok {
-			return nil
-		}
-		return &c
-	}
-
-	return nil
+func (t metricTypes) GetMetricFunctions(metricType string) (metricTypeFunc, bool) {
+	val, ok := t[metricType]
+	return val, ok
 }
 
-func NewMetricsService(storage Storage) *StorageService {
+func NewMetricsService(storage Storage) *MetricsService {
 
-	return &StorageService{
+	return &MetricsService{
 		storage: storage,
-		metricTypes: MetricTypes{
-			"gauge": MetricTypeFunc{
+		metricTypes: metricTypes{
+			"gauge": {
 				ParseFunc: func(str string) (any, error) {
 					return strconv.ParseFloat(str, 64)
 				},
@@ -63,7 +56,7 @@ func NewMetricsService(storage Storage) *StorageService {
 				},
 			},
 
-			"counter": MetricTypeFunc{
+			"counter": {
 				ParseFunc: func(str string) (any, error) {
 					return strconv.ParseInt(str, 10, 64)
 				},
@@ -83,8 +76,8 @@ func NewMetricsService(storage Storage) *StorageService {
 	}
 }
 
-func (s StorageService) parseURL(url string, searchWord string) ([]string, error) {
-	idx := strings.Index(url, searchWord)
+func (_ *MetricsService) parseURL(url string, searchWord string) ([]string, error) {
+	idx := strings.Index(url, searchWord+"/")
 	if idx == -1 {
 		return nil, models.ErrNotFoundMetric
 	}
@@ -96,19 +89,22 @@ func (s StorageService) parseURL(url string, searchWord string) ([]string, error
 	return splitedURL, nil
 }
 
-func (s *StorageService) Save(url string) error {
+func (s *MetricsService) Save(url string) error {
 	parsedMetric, err := s.parseURL(url, "update")
 	if err != nil {
 		return err
 	}
+	if len(parsedMetric) < 3 {
+		return models.ErrWrongMetricValue
+	}
 	metricType, metric, metricValue := parsedMetric[0], parsedMetric[1], parsedMetric[2]
 
-	acceptedMetricType := s.metricTypes.GetMetricFunctions(metricType)
-	if acceptedMetricType == nil {
+	acceptedMetricType, ok := s.metricTypes.GetMetricFunctions(metricType)
+	if !ok {
 		return models.ErrUnknownMetricType
 	}
 
-	parsedValue, err := (*acceptedMetricType).ParseFunc(metricValue)
+	parsedValue, err := acceptedMetricType.ParseFunc(metricValue)
 	if err != nil || parsedValue == nil {
 		return models.ErrWrongMetricValue
 	}
@@ -121,14 +117,14 @@ func (s *StorageService) Save(url string) error {
 	return nil
 }
 
-func (s *StorageService) Find(url string) (any, error) {
+func (s *MetricsService) Find(url string) (any, error) {
 	parsedMetric, err := s.parseURL(url, "value")
 	if err != nil {
 		return nil, err
 	}
 	metricType, metric := parsedMetric[0], parsedMetric[1]
-	metricFunc := s.metricTypes.GetMetricFunctions(metricType)
-	if metricFunc == nil {
+	metricFunc, ok := s.metricTypes.GetMetricFunctions(metricType)
+	if !ok {
 		return nil, models.ErrUnknownMetricType
 	}
 	val, ok := metricFunc.FindFunc(metric)
@@ -138,6 +134,6 @@ func (s *StorageService) Find(url string) (any, error) {
 	return val, nil
 }
 
-func (s *StorageService) GetAll() map[string]any {
+func (s *MetricsService) GetAll() map[string]any {
 	return s.storage.GetAll()
 }
