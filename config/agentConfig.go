@@ -9,11 +9,11 @@ type AgentConfig struct {
 }
 
 func LoadAgentConfig() *AgentConfig {
-	rInterval := flag.Int("dest", 10, "interval of sending data to server")
-	pInterval := flag.Int("w", 2, "interval of data collecting from runtime")
+	rInterval := flag.Int("r", 10, "interval of sending data to server")
+	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
 	httpConfig := GetDefaultHTTPConfig()
 	_ = flag.Value(httpConfig)
-	flag.Var(httpConfig, "a", "")
+	flag.Var(httpConfig, "a", "server host:port")
 	flag.Parse()
 
 	return &AgentConfig{
