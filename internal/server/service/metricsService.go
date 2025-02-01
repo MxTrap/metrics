@@ -76,7 +76,7 @@ func NewMetricsService(storage Storage) *MetricsService {
 	}
 }
 
-func (_ *MetricsService) parseURL(url string, searchWord string) ([]string, error) {
+func (*MetricsService) parseURL(url string, searchWord string) ([]string, error) {
 	idx := strings.Index(url, searchWord+"/")
 	if idx == -1 {
 		return nil, models.ErrNotFoundMetric
