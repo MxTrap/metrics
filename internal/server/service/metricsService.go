@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -128,7 +127,6 @@ func (s *StorageService) Find(url string) (any, error) {
 		return nil, err
 	}
 	metricType, metric := parsedMetric[0], parsedMetric[1]
-	fmt.Println(metricType, metric)
 	metricFunc := s.metricTypes.GetMetricFunctions(metricType)
 	if metricFunc == nil {
 		return nil, models.ErrUnknownMetricType

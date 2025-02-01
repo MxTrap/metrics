@@ -27,11 +27,6 @@ func NewHandler(service MetricService) *Handler {
 
 func (h Handler) Save(g *gin.Context) {
 
-	if g.Request.Header.Get("Content-Type") != "text/plain" {
-		g.Status(http.StatusUnsupportedMediaType)
-		return
-	}
-
 	if err := h.service.Save(g.Request.RequestURI); err != nil {
 		if errors.Is(err, models.ErrNotFoundMetric) {
 			g.Status(http.StatusNotFound)

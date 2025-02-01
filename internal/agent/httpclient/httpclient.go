@@ -60,7 +60,6 @@ func (h *HTTPClient) postMetric(metricType string, metric string, value any) {
 func (h *HTTPClient) sendMetrics() {
 	metrics := h.service.GetMetrics()
 
-	fmt.Println(metrics)
 	for key, val := range metrics.Gauge {
 		h.postMetric("gauge", key, val)
 	}

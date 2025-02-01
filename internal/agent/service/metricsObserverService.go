@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/mappers"
 	"github.com/MxTrap/metrics/internal/agent/models"
 	"runtime"
@@ -32,7 +31,6 @@ func (s *MetricsObserverService) Run() {
 
 	go func(service *MetricsObserverService) {
 		for s.ctx != nil {
-			fmt.Println("Starting metrics observer")
 			s.CollectMetrics()
 			time.Sleep(time.Duration(s.pollInterval) * time.Second)
 		}
