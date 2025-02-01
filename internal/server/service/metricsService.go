@@ -84,7 +84,7 @@ func NewMetricsService(storage Storage) *StorageService {
 	}
 }
 
-func (s StorageService) parseUrl(url string, searchWord string) ([]string, error) {
+func (s StorageService) parseURL(url string, searchWord string) ([]string, error) {
 	idx := strings.Index(url, searchWord)
 	if idx == -1 {
 		return nil, models.ErrNotFoundMetric
@@ -98,7 +98,7 @@ func (s StorageService) parseUrl(url string, searchWord string) ([]string, error
 }
 
 func (s *StorageService) Save(url string) error {
-	parsedMetric, err := s.parseUrl(url, "update")
+	parsedMetric, err := s.parseURL(url, "update")
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (s *StorageService) Save(url string) error {
 }
 
 func (s *StorageService) Find(url string) (any, error) {
-	parsedMetric, err := s.parseUrl(url, "value")
+	parsedMetric, err := s.parseURL(url, "value")
 	if err != nil {
 		return nil, err
 	}
