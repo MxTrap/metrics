@@ -15,11 +15,16 @@ type App struct {
 	client  *httpclient.HTTPClient
 }
 
-func NewApp(cfg *config.ServerConfig) *App {
+func NewApp(cfg *config.AgentConfig) *App {
 	ctx := context.Background()
 	storage := repository.NewMetricsStorage()
-	mService := service.NewMetricsObserverService(ctx, storage, 2)
-	client := httpclient.NewHTTPClient(ctx, mService, fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port), 10)
+	mService := service.NewMetricsObserverService(ctx, storage, cfg.PollInterval)
+	client := httpclient.NewHTTPClient(
+		ctx,
+		mService,
+		fmt.Sprintf("%s:%d", cfg.ServerConfig.Host, cfg.ServerConfig.Port),
+		cfg.ReportInterval,
+	)
 
 	return &App{
 		ctx:     ctx,

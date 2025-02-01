@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	cfg := config.LoadServerConfig()
+	cfg := config.LoadAgentConfig()
 	clientApp := app.NewApp(cfg)
 
 	clientApp.Run()
