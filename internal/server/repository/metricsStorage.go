@@ -23,3 +23,24 @@ func (s *MemStorage) SaveCounterMetric(metric string, value int64) {
 	}
 	s.counter[metric] = storedVal + value
 }
+
+func (s *MemStorage) FindGaugeMetric(metric string) (float64, bool) {
+	value, ok := s.gauge[metric]
+	return value, ok
+}
+
+func (s *MemStorage) FindCounterMetric(metric string) (int64, bool) {
+	value, ok := s.counter[metric]
+	return value, ok
+}
+
+func (s *MemStorage) GetAll() map[string]any {
+	dst := map[string]any{}
+	for k, v := range s.gauge {
+		dst[k] = v
+	}
+	for k, v := range s.counter {
+		dst[k] = v
+	}
+	return dst
+}

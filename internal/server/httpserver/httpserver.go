@@ -2,28 +2,36 @@ package httpserver
 
 import (
 	"fmt"
-	"net/http"
-
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
+	"github.com/MxTrap/metrics/internal/utils"
+	"github.com/gin-gonic/gin"
 )
 
 type HTTPServer struct {
-	mux  *http.ServeMux
-	host string
+	router *gin.Engine
+	host   string
 }
 
-func New(cfg config.HTTPConfig, service handlers.MetricsSaver) *HTTPServer {
-	mux := http.NewServeMux()
+func New(cfg config.HTTPConfig, service handlers.MetricService) *HTTPServer {
+	router := gin.Default()
+	router.HandleMethodNotAllowed = true
+	router.LoadHTMLGlob(utils.GetProjectPath() + "/internal/server/templates/*")
 	handler := handlers.NewHandler(service)
-	mux.HandleFunc("/", handler.Save)
+	uri := "/:metricType/:metricName"
+	router.GET("/value"+uri, handler.Find)
+	router.POST(fmt.Sprintf("/update/%s/:metricValue", uri), handler.Save)
+	router.GET("/", handler.GetAll)
 
 	return &HTTPServer{
-		mux:  mux,
-		host: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		router: router,
+		host:   fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
 }
 
 func (h HTTPServer) Run() {
-	http.ListenAndServe(h.host, h.mux)
+	err := h.router.Run(h.host)
+	if err != nil {
+		return
+	}
 }

@@ -2,51 +2,80 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 
 	"github.com/MxTrap/metrics/internal/server/models"
 )
 
-type MetricsSaver interface {
+type MetricService interface {
 	Save(url string) error
+	Find(url string) (any, error)
+	GetAll() map[string]any
 }
 
 type Handler struct {
-	service MetricsSaver
+	service MetricService
 }
 
-func NewHandler(service MetricsSaver) *Handler {
+func NewHandler(service MetricService) *Handler {
 	return &Handler{
 		service: service,
 	}
 }
 
-func (h Handler) Save(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if r.Header.Get("Content-Type") != "text/plain" {
-		w.WriteHeader(http.StatusUnsupportedMediaType)
+func (h Handler) Save(g *gin.Context) {
+
+	if g.Request.Header.Get("Content-Type") != "text/plain" {
+		g.Status(http.StatusUnsupportedMediaType)
 		return
 	}
 
-	if err := h.service.Save(r.RequestURI); err != nil {
+	if err := h.service.Save(g.Request.RequestURI); err != nil {
 		if errors.Is(err, models.ErrNotFoundMetric) {
-			w.WriteHeader(http.StatusNotFound)
+			g.Status(http.StatusNotFound)
 			return
 		}
 		if errors.Is(err, models.ErrUnknownMetricType) {
-			w.WriteHeader(http.StatusBadRequest)
+			g.Status(http.StatusBadRequest)
 			return
 		}
 		if errors.Is(err, models.ErrWrongMetricValue) {
-			w.WriteHeader(http.StatusBadRequest)
+			g.Status(http.StatusBadRequest)
 			return
 		}
-		w.WriteHeader(http.StatusInternalServerError)
+		g.Status(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	g.Status(http.StatusOK)
+}
+
+func (h Handler) Find(g *gin.Context) {
+	val, err := h.service.Find(g.Request.RequestURI)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFoundMetric) {
+			g.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, models.ErrUnknownMetricType) {
+			g.Status(http.StatusBadRequest)
+			return
+		}
+		if errors.Is(err, models.ErrWrongMetricValue) {
+			g.Status(http.StatusBadRequest)
+			return
+		}
+		g.Status(http.StatusInternalServerError)
+		return
+	}
+
+	g.String(http.StatusOK, fmt.Sprintf("%v", val))
+}
+
+func (h Handler) GetAll(g *gin.Context) {
+	g.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"metrics": h.service.GetAll(),
+	})
 }
