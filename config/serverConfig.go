@@ -5,14 +5,16 @@ import (
 	"os"
 )
 
+type parseConfig struct {
+	address string `env:"address"`
+}
+
 type ServerConfig struct {
 	HTTP HTTPConfig
 }
 
-func LoadServerConfig() *ServerConfig {
-	httpConfig := GetDefaultHTTPConfig()
-	_ = flag.Value(httpConfig)
-
+func NewServerConfig() *ServerConfig {
+	httpConfig := NewDefaultHTTPConfig()
 	flag.Var(httpConfig, "a", "")
 	flag.Parse()
 

@@ -13,7 +13,7 @@ type HTTPServer struct {
 	host   string
 }
 
-func New(cfg config.HTTPConfig, service handlers.MetricService) *HTTPServer {
+func NewRouter(cfg config.HTTPConfig, service handlers.MetricService) *HTTPServer {
 	router := gin.Default()
 	router.HandleMethodNotAllowed = true
 	router.LoadHTMLGlob(utils.GetProjectPath() + "/internal/server/templates/*")

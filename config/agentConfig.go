@@ -2,45 +2,44 @@ package config
 
 import (
 	"flag"
-	"os"
-	"strconv"
+	"fmt"
+	"github.com/caarlos0/env"
+	"reflect"
 )
 
 type AgentConfig struct {
-	ServerConfig   HTTPConfig
-	ReportInterval int
-	PollInterval   int
+	ServerConfig   HTTPConfig `env:"ADDRESS"`
+	ReportInterval int        `env:"REPORT_INTERVAL"`
+	PollInterval   int        `env:"POLL_INTERVAL"`
 }
 
-func LoadAgentConfig() *AgentConfig {
+func NewAgentConfig() (*AgentConfig, error) {
 	rInterval := flag.Int("r", 10, "interval of sending data to server")
 	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
-	httpConfig := GetDefaultHTTPConfig()
-	_ = flag.Value(httpConfig)
+	httpConfig := NewDefaultHTTPConfig()
 	flag.Var(httpConfig, "a", "server host:port")
 	flag.Parse()
 
-	if interval := os.Getenv("REPORT_INTERVAL"); interval != "" {
-		iInterval, err := strconv.Atoi(interval)
-		if err == nil {
-			rInterval = &iInterval
-		}
-	}
-
-	if interval := os.Getenv("POLL_INTERVAL"); interval != "" {
-		iInterval, err := strconv.Atoi(interval)
-		if err == nil {
-			pInterval = &iInterval
-		}
-	}
-
-	if addr := os.Getenv("ADDRESS"); addr != "" {
-		_ = httpConfig.Set(addr)
-	}
-
-	return &AgentConfig{
+	agentConfig := &AgentConfig{
 		ServerConfig:   *httpConfig,
 		ReportInterval: *rInterval,
 		PollInterval:   *pInterval,
 	}
+
+	err := env.ParseWithFuncs(agentConfig, map[reflect.Type]env.ParserFunc{
+		reflect.TypeOf(HTTPConfig{}): func(v string) (interface{}, error) {
+			fmt.Println("v", v)
+			cfg := HTTPConfig{}
+			err := cfg.Set(v)
+			if err != nil {
+				return nil, err
+			}
+			return cfg, nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return agentConfig, nil
 }

@@ -49,24 +49,26 @@ func (h Handler) Save(g *gin.Context) {
 
 func (h Handler) Find(g *gin.Context) {
 	val, err := h.service.Find(g.Request.RequestURI)
-	if err != nil {
-		if errors.Is(err, models.ErrNotFoundMetric) {
-			g.Status(http.StatusNotFound)
-			return
-		}
-		if errors.Is(err, models.ErrUnknownMetricType) {
-			g.Status(http.StatusBadRequest)
-			return
-		}
-		if errors.Is(err, models.ErrWrongMetricValue) {
-			g.Status(http.StatusBadRequest)
-			return
-		}
-		g.Status(http.StatusInternalServerError)
+	if err == nil {
+		g.String(http.StatusOK, fmt.Sprintf("%v", val))
 		return
 	}
 
-	g.String(http.StatusOK, fmt.Sprintf("%v", val))
+	if errors.Is(err, models.ErrNotFoundMetric) {
+		g.Status(http.StatusNotFound)
+		return
+	}
+	if errors.Is(err, models.ErrUnknownMetricType) {
+		g.Status(http.StatusBadRequest)
+		return
+	}
+	if errors.Is(err, models.ErrWrongMetricValue) {
+		g.Status(http.StatusBadRequest)
+		return
+	}
+	g.Status(http.StatusInternalServerError)
+	return
+
 }
 
 func (h Handler) GetAll(g *gin.Context) {

@@ -14,7 +14,7 @@ type App struct {
 func NewApp(cfg *config.ServerConfig) *App {
 	storage := repository.NewMemStorage()
 	metricsService := service.NewMetricsService(storage)
-	http := httpserver.New(cfg.HTTP, metricsService)
+	http := httpserver.NewRouter(cfg.HTTP, metricsService)
 
 	return &App{
 		httpServer: http,
