@@ -67,8 +67,6 @@ func (h Handler) Find(g *gin.Context) {
 		return
 	}
 	g.Status(http.StatusInternalServerError)
-	return
-
 }
 
 func (h Handler) GetAll(g *gin.Context) {
