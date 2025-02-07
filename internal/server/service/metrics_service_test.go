@@ -1,9 +1,7 @@
 package service
 
 import (
-	"errors"
 	"github.com/stretchr/testify/assert"
-	"strconv"
 	"testing"
 )
 
@@ -44,22 +42,7 @@ func newMockService() *MetricsService {
 	return &MetricsService{
 		storage: storage,
 		metricTypes: metricTypes{
-			"gauge": {
-				ParseFunc: func(str string) (any, error) {
-					return strconv.ParseFloat(str, 64)
-				},
-				SaveFunc: func(metric string, value any) error {
-					cVal, ok := value.(float64)
-					if !ok {
-						return errors.New("value is not a float64")
-					}
-					storage.SaveGaugeMetric(metric, cVal)
-					return nil
-				},
-				FindFunc: func(metric string) (any, bool) {
-					return storage.FindGaugeMetric(metric)
-				},
-			},
+			"gauge": NewGaugeMetricService(storage),
 		},
 	}
 
@@ -219,42 +202,6 @@ func TestMetricsService_parseURL(t *testing.T) {
 				return
 			}
 			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func Test_metricTypes_GetMetricFunctions(t *testing.T) {
-	tests := []struct {
-		name       string
-		t          metricTypes
-		metricType string
-		want       metricTypeFunc
-		want1      bool
-	}{
-		{
-			name: "test get existing metric functions",
-			t: metricTypes{
-				"gauge": metricTypeFunc{},
-			},
-			metricType: "gauge",
-			want:       metricTypeFunc{},
-			want1:      true,
-		},
-		{
-			name: "test get unknown metric functions",
-			t: metricTypes{
-				"gauge": metricTypeFunc{},
-			},
-			metricType: "gauge1",
-			want:       metricTypeFunc{},
-			want1:      false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := tt.t.GetMetricFunctions(tt.metricType)
-			assert.Equal(t, tt.want, got)
-			assert.Equal(t, tt.want1, got1)
 		})
 	}
 }
