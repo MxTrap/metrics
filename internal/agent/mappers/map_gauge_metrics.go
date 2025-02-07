@@ -5,7 +5,7 @@ import (
 	"runtime"
 )
 
-func MapMemStatsToGaugeMetrics(ms runtime.MemStats) models.GaugeMetrics {
+func MapGaugeMetrics(ms runtime.MemStats) models.GaugeMetrics {
 	return models.GaugeMetrics{
 		"Alloc":         ms.Alloc,
 		"BuckHashSys":   ms.BuckHashSys,

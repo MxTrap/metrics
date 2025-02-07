@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env"
 	"reflect"
 )
@@ -28,7 +27,6 @@ func NewAgentConfig() (*AgentConfig, error) {
 
 	err := env.ParseWithFuncs(agentConfig, map[reflect.Type]env.ParserFunc{
 		reflect.TypeOf(HTTPConfig{}): func(v string) (interface{}, error) {
-			fmt.Println("v", v)
 			cfg := HTTPConfig{}
 			err := cfg.Set(v)
 			if err != nil {

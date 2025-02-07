@@ -44,7 +44,7 @@ func (s *MetricsObserverService) Stop() {
 func (s *MetricsObserverService) CollectMetrics() {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	s.storage.SaveMetrics(mappers.MapMemStatsToGaugeMetrics(ms))
+	s.storage.SaveMetrics(mappers.MapGaugeMetrics(ms))
 }
 
 func (s *MetricsObserverService) GetMetrics() models.Metrics {
