@@ -5,10 +5,6 @@ import (
 	"os"
 )
 
-type parseConfig struct {
-	address string `env:"address"`
-}
-
 type ServerConfig struct {
 	HTTP HTTPConfig
 }
