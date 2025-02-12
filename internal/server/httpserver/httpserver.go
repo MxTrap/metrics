@@ -13,8 +13,13 @@ type HTTPServer struct {
 	host   string
 }
 
-func NewRouter(cfg config.HTTPConfig, service handlers.MetricService) *HTTPServer {
-	router := gin.Default()
+type logger interface {
+	Logger() gin.HandlerFunc
+}
+
+func NewRouter(cfg config.HTTPConfig, service handlers.MetricService, log logger) *HTTPServer {
+	router := gin.New()
+	router.Use(log.Logger(), gin.Recovery())
 	router.HandleMethodNotAllowed = true
 	router.LoadHTMLGlob(utils.GetProjectPath() + "/internal/server/templates/*")
 	handler := handlers.NewHandler(service)
