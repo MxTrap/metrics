@@ -29,8 +29,7 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 						"gauge2": 2.2,
 					},
 					Counter: models.CounterMetrics{
-						PollCount:   1,
-						RandomValue: 123,
+						PollCount: 1,
 					},
 				},
 			},
@@ -40,8 +39,7 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 					"gauge2": 2.2,
 				},
 				Counter: models.CounterMetrics{
-					PollCount:   1,
-					RandomValue: 123,
+					PollCount: 1,
 				},
 			},
 		},
@@ -76,8 +74,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 					"gauge2": 2.2,
 				},
 				Counter: models.CounterMetrics{
-					PollCount:   1,
-					RandomValue: 1,
+					PollCount: 1,
 				},
 			},
 		},
@@ -101,8 +98,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 					"gauge3": 3.3,
 				},
 				Counter: models.CounterMetrics{
-					PollCount:   2,
-					RandomValue: 1,
+					PollCount: 2,
 				},
 			},
 		},
@@ -116,7 +112,6 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 			}
 			for _, val := range tt.args {
 				s.SaveMetrics(val)
-				s.storage.Counter.RandomValue = 1
 			}
 			assert.Equal(t, tt.want, s.storage)
 		})
