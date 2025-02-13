@@ -1,6 +1,7 @@
 package service
 
 import (
+	common_moodels "github.com/MxTrap/metrics/internal/common/models"
 	"strings"
 
 	"github.com/MxTrap/metrics/internal/server/models"
@@ -16,6 +17,7 @@ type metricTypes map[string]metricTypeService
 
 type metricTypeService interface {
 	Save(metric string, value string) error
+	SaveJSON(metric string, value any) error
 	Find(metric string) (any, bool)
 }
 
@@ -76,6 +78,35 @@ func (s *MetricsService) Save(url string) error {
 	return nil
 }
 
+func (s *MetricsService) SaveJSON(metric common_moodels.Metrics) error {
+
+	acceptedMetricType, ok := s.metricTypes.GetMetricTypeService(metric.MType)
+	if !ok {
+		return models.ErrUnknownMetricType
+	}
+
+	var value any
+
+	if metric.Delta != nil {
+		value = metric.Delta
+	}
+
+	if metric.Value != nil {
+		value = metric.Value
+	}
+
+	if value == nil {
+		return models.ErrWrongMetricValue
+	}
+
+	err := acceptedMetricType.SaveJSON(metric.ID, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *MetricsService) Find(url string) (any, error) {
 	parsedMetric, err := s.parseURL(url, "value")
 	if err != nil {
@@ -91,6 +122,33 @@ func (s *MetricsService) Find(url string) (any, error) {
 		return nil, models.ErrNotFoundMetric
 	}
 	return val, nil
+}
+
+func (s *MetricsService) FindJSON(metric common_moodels.Metrics) (common_moodels.Metrics, error) {
+	metricFunc, ok := s.metricTypes.GetMetricTypeService(metric.MType)
+	if !ok {
+		return common_moodels.Metrics{}, models.ErrUnknownMetricType
+	}
+	val, ok := metricFunc.Find(metric.ID)
+	if !ok {
+		return common_moodels.Metrics{}, models.ErrNotFoundMetric
+	}
+	if metric.MType == common_moodels.Gauge {
+		cVal, ok := val.(float64)
+		if !ok {
+			return common_moodels.Metrics{}, models.ErrNotFoundMetric
+		}
+		metric.Value = &cVal
+	}
+
+	if metric.MType == common_moodels.Counter {
+		cVal, ok := val.(int64)
+		if !ok {
+			return common_moodels.Metrics{}, models.ErrNotFoundMetric
+		}
+		metric.Delta = &cVal
+	}
+	return metric, nil
 }
 
 func (s *MetricsService) GetAll() map[string]any {

@@ -25,7 +25,9 @@ func NewRouter(cfg config.HTTPConfig, service handlers.MetricService, log logger
 	handler := handlers.NewHandler(service)
 	uri := "/:metricType/:metricName"
 	router.GET("/value"+uri, handler.Find)
+	router.POST("/update/", handler.SaveJSON)
 	router.POST(fmt.Sprintf("/update/%s/:metricValue", uri), handler.Save)
+	router.POST("/value/", handler.FindJSON)
 	router.GET("/", handler.GetAll)
 
 	return &HTTPServer{

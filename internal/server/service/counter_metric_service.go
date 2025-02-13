@@ -23,6 +23,16 @@ func NewCounterMetricService(storage counterMetricsStorage) *CounterMetricServic
 func (*CounterMetricService) parse(str string) (int64, error) {
 	return strconv.ParseInt(str, 10, 64)
 }
+
+func (s *CounterMetricService) SaveJSON(metric string, value any) error {
+	parsed, ok := value.(*int64)
+	if !ok {
+		return models.ErrWrongMetricValue
+	}
+	s.storage.SaveCounterMetric(metric, *parsed)
+	return nil
+}
+
 func (s *CounterMetricService) Save(metric string, value string) error {
 	parsedValue, err := s.parse(value)
 	if err != nil {

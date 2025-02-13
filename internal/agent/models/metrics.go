@@ -1,6 +1,11 @@
 package models
 
-type GaugeMetrics map[string]any
+const (
+	Gauge   = "gauge"
+	Counter = "counter"
+)
+
+type GaugeMetrics map[string]float64
 
 type CounterMetrics struct {
 	PollCount   int64

@@ -1,9 +1,13 @@
 package httpclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/MxTrap/metrics/internal/agent/models"
 	"github.com/MxTrap/metrics/internal/agent/service"
+	common_moodels "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/mailru/easyjson"
 	"net/http"
 	"time"
 )
@@ -42,28 +46,56 @@ func (h *HTTPClient) Run() {
 	}(h.service)
 }
 
-func (h *HTTPClient) postMetric(metricType string, metric string, value any) {
+func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
+
+	body, err := easyjson.Marshal(metric)
+	if err != nil {
+		return err
+	}
 	resp, err := h.client.Post(
-		fmt.Sprintf("http://%s/update/%s/%s/%v", h.serverURL, metricType, metric, value),
-		"text/plain",
-		nil,
+		fmt.Sprintf("http://%s/update", h.serverURL),
+		"application/json",
+		bytes.NewBuffer(body),
 	)
 	if err != nil {
-		return
+		return err
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		return
+		return err
 	}
+	return nil
 }
 
 func (h *HTTPClient) sendMetrics() {
 	metrics := h.service.GetMetrics()
 
 	for key, val := range metrics.Gauge {
-		h.postMetric("gauge", key, val)
+		err := h.postMetric(common_moodels.Metrics{
+			ID:    models.Gauge,
+			MType: key,
+			Value: &val,
+		})
+		if err != nil {
+			return
+		}
 	}
-	h.postMetric("counter", "PollCount", metrics.Counter.PollCount)
-	h.postMetric("counter", "RandomValue", metrics.Counter.RandomValue)
+
+	err := h.postMetric(common_moodels.Metrics{
+		ID:    models.Counter,
+		MType: "PollCount",
+		Delta: &metrics.Counter.PollCount,
+	})
+	if err != nil {
+		return
+	}
+	err = h.postMetric(common_moodels.Metrics{
+		ID:    models.Counter,
+		MType: "RandomValue",
+		Delta: &metrics.Counter.RandomValue,
+	})
+	if err != nil {
+		return
+	}
 
 }
