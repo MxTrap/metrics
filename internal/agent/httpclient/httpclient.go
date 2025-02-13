@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/MxTrap/metrics/internal/agent/models"
 	"github.com/MxTrap/metrics/internal/agent/service"
 	common_moodels "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/mailru/easyjson"
@@ -83,19 +82,10 @@ func (h *HTTPClient) sendMetrics() {
 
 	err := h.postMetric(common_moodels.Metrics{
 		ID:    "PollCount",
-		MType: models.Counter,
+		MType: common_moodels.Counter,
 		Delta: &metrics.Counter.PollCount,
 	})
 	if err != nil {
 		return
 	}
-	err = h.postMetric(common_moodels.Metrics{
-		ID:    "RandomValue",
-		MType: models.Gauge,
-		Delta: &metrics.Counter.RandomValue,
-	})
-	if err != nil {
-		return
-	}
-
 }
