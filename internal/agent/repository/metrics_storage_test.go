@@ -70,8 +70,9 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 			},
 			want: models.Metrics{
 				Gauge: map[string]float64{
-					"gauge1": 1,
-					"gauge2": 2.2,
+					"gauge1":      1,
+					"gauge2":      2.2,
+					"RandomValue": 1,
 				},
 				Counter: models.CounterMetrics{
 					PollCount: 1,
@@ -93,9 +94,10 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 			},
 			want: models.Metrics{
 				Gauge: map[string]float64{
-					"gauge1": 1,
-					"gauge2": 2,
-					"gauge3": 3.3,
+					"gauge1":      1,
+					"gauge2":      2,
+					"gauge3":      3.3,
+					"RandomValue": 1,
 				},
 				Counter: models.CounterMetrics{
 					PollCount: 2,
@@ -112,6 +114,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 			}
 			for _, val := range tt.args {
 				s.SaveMetrics(val)
+				s.storage.Gauge["RandomValue"] = 1
 			}
 			assert.Equal(t, tt.want, s.storage)
 		})
