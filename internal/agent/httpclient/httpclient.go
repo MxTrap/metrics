@@ -91,7 +91,7 @@ func (h *HTTPClient) sendMetrics() {
 	}
 	err = h.postMetric(common_moodels.Metrics{
 		ID:    "RandomValue",
-		MType: models.Counter,
+		MType: models.Gauge,
 		Delta: &metrics.Counter.RandomValue,
 	})
 	if err != nil {
