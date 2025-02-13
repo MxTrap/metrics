@@ -24,7 +24,7 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 			name: "test get empty metrics",
 			fields: fields{
 				storage: models.Metrics{
-					Gauge: map[string]any{
+					Gauge: map[string]float64{
 						"gauge1": 1,
 						"gauge2": 2.2,
 					},
@@ -35,7 +35,7 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]any{
+				Gauge: map[string]float64{
 					"gauge1": 1,
 					"gauge2": 2.2,
 				},
@@ -71,7 +71,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]any{
+				Gauge: map[string]float64{
 					"gauge1": 1,
 					"gauge2": 2.2,
 				},
@@ -95,7 +95,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]any{
+				Gauge: map[string]float64{
 					"gauge1": 1,
 					"gauge2": 2,
 					"gauge3": 3.3,
@@ -132,7 +132,7 @@ func TestNewMetricsStorage(t *testing.T) {
 			name: "test storage creation",
 			want: &MetricsStorage{
 				storage: models.Metrics{
-					Gauge:   map[string]any{},
+					Gauge:   map[string]float64{},
 					Counter: models.CounterMetrics{},
 				},
 			},
