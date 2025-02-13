@@ -47,13 +47,13 @@ func (h *HTTPClient) Run() {
 }
 
 func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
-
 	body, err := easyjson.Marshal(metric)
+
 	if err != nil {
 		return err
 	}
 	resp, err := h.client.Post(
-		fmt.Sprintf("http://%s/update", h.serverURL),
+		fmt.Sprintf("http://%s/update/", h.serverURL),
 		"application/json",
 		bytes.NewBuffer(body),
 	)
@@ -72,8 +72,8 @@ func (h *HTTPClient) sendMetrics() {
 
 	for key, val := range metrics.Gauge {
 		err := h.postMetric(common_moodels.Metrics{
-			ID:    models.Gauge,
-			MType: key,
+			ID:    key,
+			MType: common_moodels.Gauge,
 			Value: &val,
 		})
 		if err != nil {
@@ -82,16 +82,16 @@ func (h *HTTPClient) sendMetrics() {
 	}
 
 	err := h.postMetric(common_moodels.Metrics{
-		ID:    models.Counter,
-		MType: "PollCount",
+		ID:    "PollCount",
+		MType: models.Counter,
 		Delta: &metrics.Counter.PollCount,
 	})
 	if err != nil {
 		return
 	}
 	err = h.postMetric(common_moodels.Metrics{
-		ID:    models.Counter,
-		MType: "RandomValue",
+		ID:    "RandomValue",
+		MType: models.Counter,
 		Delta: &metrics.Counter.RandomValue,
 	})
 	if err != nil {

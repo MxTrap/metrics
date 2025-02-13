@@ -45,7 +45,6 @@ func parseMetric(g *gin.Context) (*common_moodels.Metrics, error) {
 
 func (h Handler) SaveJSON(g *gin.Context) {
 	m, err := parseMetric(g)
-
 	if err != nil {
 		g.Status(http.StatusBadRequest)
 		return
