@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"compress/gzip"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -43,7 +44,12 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 				Writer io.Writer
 			}
 			gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
-			defer gz.Close()
+			defer func(gz *gzip.Writer) {
+				err := gz.Close()
+				if err != nil {
+					fmt.Println(err)
+				}
+			}(gz)
 			if err != nil {
 				c.Status(http.StatusBadRequest)
 				return
