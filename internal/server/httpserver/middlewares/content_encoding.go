@@ -46,7 +46,6 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 			"application/json",
 			"text/html",
 		}
-
 		if slices.Contains(contentTypes, c.Request.Header.Get("Content-Type")) {
 
 			gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
@@ -61,12 +60,12 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 				return
 			}
 
-			c.Header("Content-Encoding", "gzip")
-
 			c.Writer = writer{
 				c.Writer,
 				gz,
 			}
+			c.Writer.Header().Add("Content-Encoding", "gzip")
+			c.Next()
 		}
 	}
 }
