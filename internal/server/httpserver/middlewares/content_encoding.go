@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -29,11 +28,21 @@ func ContentEncodingMiddleware() gin.HandlerFunc {
 
 type writer struct {
 	gin.ResponseWriter
-	Writer io.Writer
+	Writer *gzip.Writer
 }
 
 func (w writer) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
+
+	contentTypes := []string{
+		"application/json; charset=utf-8",
+		"text/html; charset=utf-8",
+	}
+
+	if slices.Contains(contentTypes, w.ResponseWriter.Header().Get("Content-Type")) {
+		return w.Writer.Write(b)
+	}
+
+	return w.ResponseWriter.Write(b)
 }
 
 func AcceptEncodingMiddleware() gin.HandlerFunc {
@@ -42,30 +51,24 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		contentTypes := []string{
-			"application/json",
-			"text/html",
-		}
-		if slices.Contains(contentTypes, c.Request.Header.Get("Content-Type")) {
-
-			gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
-			defer func(gz *gzip.Writer) {
-				err := gz.Close()
-				if err != nil {
-					fmt.Println(err)
-				}
-			}(gz)
+		gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
+		defer func(gz *gzip.Writer) {
+			err := gz.Close()
 			if err != nil {
-				c.Status(http.StatusBadRequest)
-				return
+				fmt.Println(err)
 			}
-
-			c.Writer = writer{
-				c.Writer,
-				gz,
-			}
-			c.Writer.Header().Add("Content-Encoding", "gzip")
-			c.Next()
+		}(gz)
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
 		}
+
+		c.Writer = writer{
+			c.Writer,
+			gz,
+		}
+		c.Writer.Header().Add("Content-Encoding", "gzip")
+		c.Next()
+
 	}
 }
