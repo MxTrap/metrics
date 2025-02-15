@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
+	"github.com/MxTrap/metrics/internal/server/httpserver/middlewares"
 	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +20,12 @@ type logger interface {
 
 func NewRouter(cfg config.HTTPConfig, service handlers.MetricService, log logger) *HTTPServer {
 	router := gin.New()
-	router.Use(log.Logger(), gin.Recovery())
+	router.Use(
+		log.Logger(),
+		gin.Recovery(),
+		middlewares.ContentEncodingMiddleware(),
+		middlewares.AcceptEncodingMiddleware(),
+	)
 	router.HandleMethodNotAllowed = true
 	router.LoadHTMLGlob(utils.GetProjectPath() + "/internal/server/templates/*")
 	handler := handlers.NewHandler(service)

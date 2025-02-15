@@ -2,6 +2,7 @@ package httpclient
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/service"
@@ -45,17 +46,52 @@ func (h *HTTPClient) Run() {
 	}(h.service)
 }
 
+func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
+	var b bytes.Buffer
+
+	gz, err := gzip.NewWriterLevel(&b, gzip.BestSpeed)
+	defer func(gz *gzip.Writer) {
+		err := gz.Close()
+		if err != nil {
+
+		}
+	}(gz)
+	if err != nil {
+		return nil, fmt.Errorf("failed init compress writer: %v", err)
+	}
+
+	_, err = gz.Write(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
+	}
+
+	err = gz.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed compress data: %v", err)
+	}
+
+	return &b, nil
+}
+
 func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
 	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
 		return err
 	}
-	resp, err := h.client.Post(
-		fmt.Sprintf("http://%s/update/", h.serverURL),
-		"application/json",
-		bytes.NewBuffer(body),
-	)
+
+	compressed, err := h.compress(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/", h.serverURL), compressed)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp, err := h.client.Do(req)
 	if err != nil {
 		return err
 	}
