@@ -53,7 +53,7 @@ func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	defer func(gz *gzip.Writer) {
 		err := gz.Close()
 		if err != nil {
-
+			fmt.Println("failed to close gzip writer")
 		}
 	}(gz)
 	if err != nil {

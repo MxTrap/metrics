@@ -43,10 +43,14 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 				Writer io.Writer
 			}
 			gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
+			defer gz.Close()
 			if err != nil {
 				c.Status(http.StatusBadRequest)
 				return
 			}
+
+			c.Header("Content-Encoding", "gzip")
+
 			c.Writer = writer{
 				c.Writer,
 				gz,
