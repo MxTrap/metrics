@@ -27,6 +27,15 @@ func ContentEncodingMiddleware() gin.HandlerFunc {
 	}
 }
 
+type writer struct {
+	gin.ResponseWriter
+	Writer io.Writer
+}
+
+func (w writer) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
 func AcceptEncodingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
@@ -39,10 +48,7 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 		}
 
 		if slices.Contains(contentTypes, c.Request.Header.Get("Content-Type")) {
-			type writer struct {
-				gin.ResponseWriter
-				Writer io.Writer
-			}
+
 			gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
 			defer func(gz *gzip.Writer) {
 				err := gz.Close()
