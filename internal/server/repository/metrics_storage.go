@@ -1,6 +1,8 @@
 package repository
 
-import "github.com/MxTrap/metrics/internal/common/models"
+import (
+	"github.com/MxTrap/metrics/internal/common/models"
+)
 
 type MemStorage struct {
 	metrics map[string]models.Metrics
@@ -27,10 +29,10 @@ func (s *MemStorage) GetAll() map[string]any {
 	for k, v := range s.metrics {
 		var val any
 		if v.Delta != nil {
-			val = v.Delta
+			val = *v.Delta
 		}
 		if v.Value != nil {
-			val = v.Value
+			val = *v.Value
 		}
 		dst[k] = val
 	}

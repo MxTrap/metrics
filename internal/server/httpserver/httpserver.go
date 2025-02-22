@@ -24,7 +24,7 @@ func NewRouter(cfg config.HTTPConfig, service handlers.MetricService, log logger
 		log.Logger(),
 		gin.Recovery(),
 		middlewares.ContentEncodingMiddleware(),
-		middlewares.AcceptEncodingMiddleware(),
+		//middlewares.AcceptEncodingMiddleware(),
 		middlewares.StatusErrorMiddleware(),
 	)
 	router.HandleMethodNotAllowed = true
