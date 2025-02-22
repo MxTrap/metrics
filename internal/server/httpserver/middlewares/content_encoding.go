@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -51,7 +52,8 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
+		var b bytes.Buffer
+		gz, err := gzip.NewWriterLevel(&b, gzip.BestSpeed)
 		defer func(gz *gzip.Writer) {
 			err := gz.Close()
 			if err != nil {
@@ -67,6 +69,9 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 			c.Writer,
 			gz,
 		}
-		c.Writer.Header().Add("Content-Encoding", "gzip")
+		c.Next()
+		if c.Errors.Last() == nil {
+			c.Writer.Header().Add("Content-Encoding", "gzip")
+		}
 	}
 }

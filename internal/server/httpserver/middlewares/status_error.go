@@ -10,24 +10,25 @@ import (
 func StatusErrorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+
 		err := c.Errors.Last()
 		if err == nil {
 			return
 		}
 
 		if errors.Is(err, models.ErrNotFoundMetric) {
-			c.Status(http.StatusNotFound)
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 		if errors.Is(err, models.ErrUnknownMetricType) {
-			c.Status(http.StatusBadRequest)
+			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 		if errors.Is(err, models.ErrWrongMetricValue) {
-			c.Status(http.StatusBadRequest)
+			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		c.Status(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 
 	}
 }

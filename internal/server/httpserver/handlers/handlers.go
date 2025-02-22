@@ -50,7 +50,7 @@ func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, e
 
 	metric := common_models.Metrics{
 		ID:    splitedURL[1],
-		MType: splitedURL[2],
+		MType: splitedURL[0],
 	}
 
 	if len(splitedURL) == 2 {
@@ -62,7 +62,7 @@ func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, e
 	if metric.MType == common_models.Gauge {
 		parseFloat, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			return common_models.Metrics{}, err
+			return common_models.Metrics{}, models.ErrWrongMetricValue
 		}
 		metric.Value = &parseFloat
 	}
@@ -106,6 +106,7 @@ func (h Handler) Save(g *gin.Context) {
 	}
 	if err != nil {
 		_ = g.Error(err)
+		return
 	}
 
 	g.Status(http.StatusOK)
