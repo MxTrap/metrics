@@ -39,6 +39,7 @@ func (w writer) Write(b []byte) (int, error) {
 	}
 
 	if slices.Contains(contentTypes, w.ResponseWriter.Header().Get("Content-Type")) {
+		w.Header().Add("Content-Encoding", "gzip")
 		return w.Writer.Write(b)
 	}
 
@@ -66,10 +67,6 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 		c.Writer = writer{
 			c.Writer,
 			gz,
-		}
-		c.Next()
-		if c.Errors.Last() == nil {
-			c.Writer.Header().Add("Content-Encoding", "gzip")
 		}
 	}
 }
