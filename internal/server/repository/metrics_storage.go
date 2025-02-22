@@ -1,46 +1,38 @@
 package repository
 
+import "github.com/MxTrap/metrics/internal/common/models"
+
 type MemStorage struct {
-	gauge   map[string]float64
-	counter map[string]int64
+	metrics map[string]models.Metrics
 }
 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
-		gauge:   map[string]float64{},
-		counter: map[string]int64{},
+		metrics: map[string]models.Metrics{},
 	}
 }
 
-func (s *MemStorage) SaveGaugeMetric(metric string, value float64) {
-	s.gauge[metric] = value
+func (s *MemStorage) Save(metric models.Metrics) error {
+	s.metrics[metric.ID] = metric
+	return nil
 }
 
-func (s *MemStorage) SaveCounterMetric(metric string, value int64) {
-	storedVal, ok := s.counter[metric]
-	if !ok {
-		storedVal = 0
-	}
-	s.counter[metric] = storedVal + value
-}
-
-func (s *MemStorage) FindGaugeMetric(metric string) (float64, bool) {
-	value, ok := s.gauge[metric]
-	return value, ok
-}
-
-func (s *MemStorage) FindCounterMetric(metric string) (int64, bool) {
-	value, ok := s.counter[metric]
+func (s *MemStorage) Find(metric string) (models.Metrics, bool) {
+	value, ok := s.metrics[metric]
 	return value, ok
 }
 
 func (s *MemStorage) GetAll() map[string]any {
 	dst := map[string]any{}
-	for k, v := range s.gauge {
-		dst[k] = v
-	}
-	for k, v := range s.counter {
-		dst[k] = v
+	for k, v := range s.metrics {
+		var val any
+		if v.Delta != nil {
+			val = v.Delta
+		}
+		if v.Value != nil {
+			val = v.Value
+		}
+		dst[k] = val
 	}
 	return dst
 }

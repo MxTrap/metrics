@@ -68,7 +68,5 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 			gz,
 		}
 		c.Writer.Header().Add("Content-Encoding", "gzip")
-		c.Next()
-
 	}
 }

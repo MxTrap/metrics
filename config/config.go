@@ -11,13 +11,6 @@ type HTTPConfig struct {
 	Port int
 }
 
-func NewDefaultHTTPConfig() *HTTPConfig {
-	return &HTTPConfig{
-		Host: "localhost",
-		Port: 8080,
-	}
-}
-
 func (c HTTPConfig) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }

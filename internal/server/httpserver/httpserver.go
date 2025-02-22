@@ -25,6 +25,7 @@ func NewRouter(cfg config.HTTPConfig, service handlers.MetricService, log logger
 		gin.Recovery(),
 		middlewares.ContentEncodingMiddleware(),
 		middlewares.AcceptEncodingMiddleware(),
+		middlewares.StatusErrorMiddleware(),
 	)
 	router.HandleMethodNotAllowed = true
 	router.LoadHTMLGlob(utils.GetProjectPath() + "/internal/server/templates/*")

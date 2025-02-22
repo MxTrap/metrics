@@ -1,21 +1,20 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
-	common_moodels "github.com/MxTrap/metrics/internal/common/models"
+	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/gin-gonic/gin"
 	"github.com/mailru/easyjson"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/MxTrap/metrics/internal/server/models"
 )
 
 type MetricService interface {
-	Save(url string) error
-	SaveJSON(metrics common_moodels.Metrics) error
-	Find(url string) (any, error)
-	FindJSON(metric common_moodels.Metrics) (common_moodels.Metrics, error)
+	Save(metrics common_models.Metrics) error
+	Find(metric common_models.Metrics) (common_models.Metrics, error)
 	GetAll() map[string]any
 }
 
@@ -29,118 +28,121 @@ func NewHandler(service MetricService) *Handler {
 	}
 }
 
-func parseMetric(g *gin.Context) (*common_moodels.Metrics, error) {
-	rawData, err := g.GetRawData()
+func (Handler) parseMetric(rawData []byte) (common_models.Metrics, error) {
+	m := common_models.Metrics{}
+	err := easyjson.Unmarshal(rawData, &m)
 	if err != nil {
-		return nil, err
+		return common_models.Metrics{}, err
+	}
+	return m, nil
+}
+
+func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, error) {
+	idx := strings.Index(url, searchWord+"/")
+	if idx == -1 {
+		return common_models.Metrics{}, models.ErrNotFoundMetric
+	}
+	splitedURL := strings.Split(url[idx+len(searchWord)+1:], "/")
+
+	if len(splitedURL) < 2 {
+		return common_models.Metrics{}, models.ErrNotFoundMetric
 	}
 
-	m := common_moodels.Metrics{}
-	err = easyjson.Unmarshal(rawData, &m)
-	if err != nil {
-		return nil, err
+	metric := common_models.Metrics{
+		ID:    splitedURL[1],
+		MType: splitedURL[2],
 	}
-	return &m, nil
+
+	if len(splitedURL) == 2 {
+		return metric, nil
+	}
+
+	val := splitedURL[2]
+
+	if metric.MType == common_models.Gauge {
+		parseFloat, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return common_models.Metrics{}, err
+		}
+		metric.Value = &parseFloat
+	}
+
+	if metric.MType == common_models.Counter {
+		parseInt, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return common_models.Metrics{}, err
+		}
+		metric.Delta = &parseInt
+	}
+
+	return metric, nil
 }
 
 func (h Handler) SaveJSON(g *gin.Context) {
-	m, err := parseMetric(g)
+	rawData, err := g.GetRawData()
 	if err != nil {
 		g.Status(http.StatusBadRequest)
 		return
 	}
+	m, err := h.parseMetric(rawData)
 
-	err = h.service.SaveJSON(*m)
-	if err == nil {
-		g.Status(http.StatusOK)
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
 
-	if errors.Is(err, models.ErrNotFoundMetric) {
-		g.Status(http.StatusNotFound)
+	err = h.service.Save(m)
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
-	if errors.Is(err, models.ErrUnknownMetricType) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	if errors.Is(err, models.ErrWrongMetricValue) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	g.Status(http.StatusInternalServerError)
+	g.Status(http.StatusOK)
 }
 
 func (h Handler) Save(g *gin.Context) {
-	err := h.service.Save(g.Request.RequestURI)
+	m, err := h.parseURL(g.Request.RequestURI, "update")
 	if err == nil {
-		g.Status(http.StatusOK)
-		return
+		err = h.service.Save(m)
+	}
+	if err != nil {
+		_ = g.Error(err)
 	}
 
-	if errors.Is(err, models.ErrNotFoundMetric) {
-		g.Status(http.StatusNotFound)
-		return
-	}
-	if errors.Is(err, models.ErrUnknownMetricType) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	if errors.Is(err, models.ErrWrongMetricValue) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	g.Status(http.StatusInternalServerError)
+	g.Status(http.StatusOK)
 }
 
 func (h Handler) Find(g *gin.Context) {
-	val, err := h.service.Find(g.Request.RequestURI)
+	m, err := h.parseURL(g.Request.RequestURI, "value")
 	if err == nil {
-		g.String(http.StatusOK, fmt.Sprintf("%v", val))
-		return
+		m, err = h.service.Find(m)
 	}
 
-	if errors.Is(err, models.ErrNotFoundMetric) {
-		g.Status(http.StatusNotFound)
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
-	if errors.Is(err, models.ErrUnknownMetricType) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	if errors.Is(err, models.ErrWrongMetricValue) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	g.Status(http.StatusInternalServerError)
+	g.String(http.StatusOK, fmt.Sprintf("%v", m))
 }
 
 func (h Handler) FindJSON(g *gin.Context) {
-	metric, err := parseMetric(g)
+	rawData, err := g.GetRawData()
 	if err != nil {
-		g.Status(http.StatusBadRequest)
+		_ = g.Error(err)
 		return
 	}
-	val, err := h.service.FindJSON(*metric)
-	if err == nil {
+	metric, err := h.parseMetric(rawData)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+	val, err := h.service.Find(metric)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
 
-		g.JSON(http.StatusOK, val)
-		return
-	}
+	g.JSON(http.StatusOK, val)
 
-	if errors.Is(err, models.ErrNotFoundMetric) {
-		g.Status(http.StatusNotFound)
-		return
-	}
-	if errors.Is(err, models.ErrUnknownMetricType) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	if errors.Is(err, models.ErrWrongMetricValue) {
-		g.Status(http.StatusBadRequest)
-		return
-	}
-	g.Status(http.StatusInternalServerError)
 }
 
 func (h Handler) GetAll(g *gin.Context) {

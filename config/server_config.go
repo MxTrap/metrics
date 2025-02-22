@@ -2,23 +2,45 @@ package config
 
 import (
 	"flag"
-	"os"
+	"github.com/caarlos0/env"
+	"reflect"
 )
 
 type ServerConfig struct {
-	HTTP HTTPConfig
+	HTTP            HTTPConfig `env:"ADDRESS" envDefault:"localhost:8080"`
+	StoreInterval   int        `env:"STORE_INTERVAL" envDefault:"300"`
+	FileStoragePath string     `env:"FILE_STORAGE_PATH" envDefault:"./data"`
+	Restore         bool       `env:"RESTORE" envDefault:"false"`
 }
 
-func NewServerConfig() *ServerConfig {
-	httpConfig := NewDefaultHTTPConfig()
-	flag.Var(httpConfig, "a", "")
+func NewServerConfig() (*ServerConfig, error) {
+	sInterval := flag.Int("i", 300, "interval of saving data to file")
+	sPath := flag.String("f", "", "path to file")
+	restore := flag.Bool("r", false, "restore data")
+	var httpConfig HTTPConfig
+	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
 
-	if addr := os.Getenv("ADDRESS"); addr != "" {
-		_ = httpConfig.Set(addr)
+	cfg := &ServerConfig{
+		HTTP:            httpConfig,
+		StoreInterval:   *sInterval,
+		FileStoragePath: *sPath,
+		Restore:         *restore,
 	}
 
-	return &ServerConfig{
-		HTTP: *httpConfig,
+	err := env.ParseWithFuncs(cfg, map[reflect.Type]env.ParserFunc{
+		reflect.TypeOf(HTTPConfig{}): func(v string) (interface{}, error) {
+			cfg := HTTPConfig{}
+			err := cfg.Set(v)
+			if err != nil {
+				return nil, err
+			}
+			return cfg, nil
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	return cfg, nil
 }

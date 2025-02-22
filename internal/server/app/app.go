@@ -16,7 +16,8 @@ func NewApp(cfg *config.ServerConfig) *App {
 	log := logger.NewLogger()
 
 	storage := repository.NewMemStorage()
-	metricsService := service.NewMetricsService(storage)
+	fileStorage := repository.NewMetricsFileStorage(cfg.FileStoragePath)
+	metricsService := service.NewMetricsService(storage, fileStorage)
 	http := httpserver.NewRouter(cfg.HTTP, metricsService, log)
 
 	return &App{
