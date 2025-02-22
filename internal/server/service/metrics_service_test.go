@@ -129,8 +129,8 @@ func TestMetricsService_GetAll(t *testing.T) {
 			name:    "test get all data from mocked storageService",
 			service: &MetricsService{storageService: newMockStorage()},
 			want: map[string]any{
-				"gauge1":   gVal1,
-				"counter1": cVal1,
+				"gauge1":   1.1,
+				"counter1": int64(1),
 			},
 		},
 	}
