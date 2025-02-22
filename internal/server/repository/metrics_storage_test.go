@@ -100,10 +100,7 @@ func TestMemStorage_Save(t *testing.T) {
 				metrics: map[string]common_models.Metrics{},
 			}
 			for _, arg := range tt.args {
-				err := s.Save(arg)
-				if err != nil {
-					return
-				}
+				s.Save(arg)
 			}
 			assert.Equal(t, tt.want, s.metrics)
 		})
