@@ -78,6 +78,16 @@ func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, e
 	return metric, nil
 }
 
+func (Handler) getMetricValue(metric common_models.Metrics) any {
+	if metric.MType == common_models.Gauge {
+		return *metric.Value
+	}
+	if metric.MType == common_models.Counter {
+		return *metric.Delta
+	}
+	return nil
+}
+
 func (h Handler) SaveJSON(g *gin.Context) {
 	rawData, err := g.GetRawData()
 	if err != nil {
@@ -122,7 +132,8 @@ func (h Handler) Find(g *gin.Context) {
 		_ = g.Error(err)
 		return
 	}
-	g.String(http.StatusOK, fmt.Sprintf("%v", m))
+
+	g.String(http.StatusOK, fmt.Sprintf("%v", h.getMetricValue(m)))
 }
 
 func (h Handler) FindJSON(g *gin.Context) {
@@ -136,13 +147,13 @@ func (h Handler) FindJSON(g *gin.Context) {
 		_ = g.Error(err)
 		return
 	}
-	val, err := h.service.Find(metric)
+	m, err := h.service.Find(metric)
 	if err != nil {
 		_ = g.Error(err)
 		return
 	}
 
-	g.JSON(http.StatusOK, val)
+	g.JSON(http.StatusOK, h.getMetricValue(m))
 
 }
 
