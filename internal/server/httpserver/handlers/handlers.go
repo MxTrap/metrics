@@ -70,7 +70,7 @@ func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, e
 	if metric.MType == common_models.Counter {
 		parseInt, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
-			return common_models.Metrics{}, err
+			return common_models.Metrics{}, models.ErrWrongMetricValue
 		}
 		metric.Delta = &parseInt
 	}
