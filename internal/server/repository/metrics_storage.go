@@ -14,12 +14,11 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (s *MemStorage) Save(metric models.Metrics) error {
+func (s *MemStorage) Save(metric models.Metrics) {
 	if val, ok := s.metrics[metric.ID]; ok && metric.MType == models.Counter {
 		*(metric.Delta) = *(metric.Delta) + *(val.Delta)
 	}
 	s.metrics[metric.ID] = metric
-	return nil
 }
 
 func (s *MemStorage) Find(metric string) (models.Metrics, bool) {
@@ -27,17 +26,10 @@ func (s *MemStorage) Find(metric string) (models.Metrics, bool) {
 	return value, ok
 }
 
-func (s *MemStorage) GetAll() map[string]any {
-	dst := map[string]any{}
-	for k, v := range s.metrics {
-		var val any
-		if v.Delta != nil {
-			val = *v.Delta
-		}
-		if v.Value != nil {
-			val = *v.Value
-		}
-		dst[k] = val
-	}
-	return dst
+func (s *MemStorage) GetAll() map[string]models.Metrics {
+	return s.metrics
+}
+
+func (s *MemStorage) SaveAll(metrics map[string]models.Metrics) {
+	s.metrics = metrics
 }

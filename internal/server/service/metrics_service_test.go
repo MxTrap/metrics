@@ -14,9 +14,8 @@ type mockStorage struct {
 	metrics map[string]common_models.Metrics
 }
 
-func (s *mockStorage) Save(metric common_models.Metrics) error {
+func (s *mockStorage) Save(metric common_models.Metrics) {
 	s.metrics[metric.ID] = metric
-	return nil
 }
 
 func (s *mockStorage) Find(metric string) (common_models.Metrics, bool) {
@@ -29,16 +28,16 @@ func (s *mockStorage) GetAll() map[string]any {
 	for k, v := range s.metrics {
 		var val any
 		if v.Delta != nil {
-			val = v.Delta
+			val = *v.Delta
 		}
 		if v.Value != nil {
-			val = v.Value
+			val = *v.Value
 		}
 		dst[k] = val
 	}
 	return dst
 }
-func newMockStorage() Storage {
+func newMockStorage() MetricStorageService {
 	return &mockStorage{map[string]common_models.Metrics{
 		"gauge1": {
 			ID:    "gauge1",
@@ -56,7 +55,7 @@ func newMockStorage() Storage {
 func newMockService() *MetricsService {
 	storage := newMockStorage()
 	return &MetricsService{
-		storage: storage,
+		storageService: storage,
 	}
 
 }
@@ -120,15 +119,15 @@ func TestMetricsService_GetAll(t *testing.T) {
 		want    map[string]any
 	}{
 		{
-			name: "test get all data from empty storage",
+			name: "test get all data from empty storageService",
 			service: &MetricsService{
-				storage: &mockStorage{map[string]common_models.Metrics{}},
+				storageService: &mockStorage{map[string]common_models.Metrics{}},
 			},
 			want: map[string]any{},
 		},
 		{
-			name:    "test get all data from mocked storage",
-			service: &MetricsService{storage: newMockStorage()},
+			name:    "test get all data from mocked storageService",
+			service: &MetricsService{storageService: newMockStorage()},
 			want: map[string]any{
 				"gauge1":   gVal1,
 				"counter1": cVal1,

@@ -5,27 +5,20 @@ import (
 	"github.com/MxTrap/metrics/internal/server/models"
 )
 
-type Storage interface {
-	Save(metrics common_models.Metrics) error
+type MetricStorageService interface {
+	Save(metrics common_models.Metrics)
 	Find(metric string) (common_models.Metrics, bool)
 	GetAll() map[string]any
 }
 
-type FileStorage interface {
-	Save(metrics map[string]any) error
-	Read() (map[string]any, error)
-}
-
 type MetricsService struct {
-	storage     Storage
-	fileStorage FileStorage
+	storageService MetricStorageService
 }
 
-func NewMetricsService(storage Storage, fileStorage FileStorage) *MetricsService {
+func NewMetricsService(sService MetricStorageService) *MetricsService {
 
 	return &MetricsService{
-		storage:     storage,
-		fileStorage: fileStorage,
+		storageService: sService,
 	}
 }
 
@@ -43,10 +36,7 @@ func (s *MetricsService) Save(metric common_models.Metrics) error {
 		return models.ErrWrongMetricValue
 	}
 
-	err := s.storage.Save(metric)
-	if err != nil {
-		return err
-	}
+	s.storageService.Save(metric)
 
 	return nil
 }
@@ -55,7 +45,7 @@ func (s *MetricsService) Find(metric common_models.Metrics) (common_models.Metri
 	if !s.validateMetric(metric.MType) {
 		return common_models.Metrics{}, models.ErrUnknownMetricType
 	}
-	val, ok := s.storage.Find(metric.ID)
+	val, ok := s.storageService.Find(metric.ID)
 	if !ok {
 		return common_models.Metrics{}, models.ErrNotFoundMetric
 	}
@@ -64,5 +54,5 @@ func (s *MetricsService) Find(metric common_models.Metrics) (common_models.Metri
 }
 
 func (s *MetricsService) GetAll() map[string]any {
-	return s.storage.GetAll()
+	return s.storageService.GetAll()
 }

@@ -3,6 +3,7 @@ package repository
 import (
 	"bufio"
 	"encoding/json"
+	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"os"
 )
 
@@ -16,8 +17,8 @@ func NewMetricsFileStorage(filePath string) *MetricsFileStorage {
 	}
 }
 
-func (s MetricsFileStorage) Save(metrics map[string]any) error {
-	file, err := os.OpenFile(s.filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+func (s MetricsFileStorage) Save(metrics map[string]common_models.Metrics) error {
+	file, err := os.OpenFile(s.filePath, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func (s MetricsFileStorage) Save(metrics map[string]any) error {
 
 	return nil
 }
-func (s MetricsFileStorage) Read() (map[string]any, error) {
+func (s MetricsFileStorage) Read() (map[string]common_models.Metrics, error) {
 	file, err := os.Open(s.filePath)
 	if err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (s MetricsFileStorage) Read() (map[string]any, error) {
 	}
 	data := scanner.Bytes()
 
-	var res map[string]any
+	var res map[string]common_models.Metrics
 	err = json.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
