@@ -7,7 +7,7 @@ import (
 )
 
 type AgentConfig struct {
-	ServerConfig   HTTPConfig `env:"ADDRESS" envDefault:"localhost:8080"`
+	ServerConfig   HTTPConfig `env:"ADDRESS"`
 	ReportInterval int        `env:"REPORT_INTERVAL"`
 	PollInterval   int        `env:"POLL_INTERVAL"`
 }
@@ -15,7 +15,7 @@ type AgentConfig struct {
 func NewAgentConfig() (*AgentConfig, error) {
 	rInterval := flag.Int("r", 10, "interval of sending data to server")
 	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
-	var httpConfig HTTPConfig
+	httpConfig := NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
 
