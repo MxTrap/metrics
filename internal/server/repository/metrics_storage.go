@@ -16,7 +16,7 @@ func NewMemStorage() *MemStorage {
 
 func (s *MemStorage) Save(metric models.Metrics) error {
 	if val, ok := s.metrics[metric.ID]; ok && metric.MType == models.Counter {
-		*(val.Delta) = *(val.Delta) + *(metric.Delta)
+		*(metric.Delta) = *(metric.Delta) + *(val.Delta)
 	}
 	s.metrics[metric.ID] = metric
 	return nil
