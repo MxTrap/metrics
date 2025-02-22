@@ -153,7 +153,7 @@ func (h Handler) FindJSON(g *gin.Context) {
 		return
 	}
 
-	g.JSON(http.StatusOK, h.getMetricValue(m))
+	g.JSON(http.StatusOK, m)
 
 }
 
