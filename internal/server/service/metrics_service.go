@@ -66,3 +66,8 @@ func (s *MetricsService) Find(metric common_models.Metrics) (common_models.Metri
 func (s *MetricsService) GetAll() map[string]any {
 	return s.storage.GetAll()
 }
+
+func (s *MetricsService) saveToFile() error {
+	s.storage.GetAll()
+	return nil
+}
