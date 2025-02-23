@@ -29,11 +29,11 @@ func NewApp(cfg *config.ServerConfig) *App {
 }
 
 func (a App) Run() {
-	a.httpServer.Run()
 	err := a.storageService.Start()
 	if err != nil {
 		return
 	}
+	a.httpServer.Run()
 }
 
 func (a App) Stop() {

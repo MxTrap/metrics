@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"time"
 )
@@ -23,6 +24,7 @@ type Storage interface {
 type FileStorage interface {
 	Save(metrics map[string]common_models.Metrics) error
 	Read() (map[string]common_models.Metrics, error)
+	Close() error
 }
 
 type StorageService struct {
@@ -77,6 +79,7 @@ func (s *StorageService) saveToFile() {
 func (s *StorageService) Start() error {
 	if s.restore {
 		read, err := s.fileStorage.Read()
+		fmt.Println(read, err)
 		if err != nil {
 			return err
 		}
@@ -96,4 +99,8 @@ func (s *StorageService) Start() error {
 
 func (s *StorageService) Stop() {
 	s.ticker.Stop()
+	err := s.fileStorage.Close()
+	if err != nil {
+		return
+	}
 }

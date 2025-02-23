@@ -9,66 +9,64 @@ import (
 
 type MetricsFileStorage struct {
 	filePath string
+	file     *os.File
 }
 
 func NewMetricsFileStorage(filePath string) *MetricsFileStorage {
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		return nil
+	}
 	return &MetricsFileStorage{
 		filePath: filePath,
+		file:     file,
 	}
 }
 
 func (s MetricsFileStorage) Save(metrics map[string]common_models.Metrics) error {
-	file, err := os.OpenFile(s.filePath, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			return
-		}
-	}(file)
-
 	data, err := json.Marshal(metrics)
 
 	if err != nil {
 		return err
 	}
 
-	data = append(data, '\n')
-
-	_, err = file.Write(data)
+	err = s.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = s.file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+	_, err = s.file.Write(data)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-func (s MetricsFileStorage) Read() (map[string]common_models.Metrics, error) {
-	file, err := os.Open(s.filePath)
-	if err != nil {
-		return nil, err
+func (s *MetricsFileStorage) Read() (map[string]common_models.Metrics, error) {
+
+	var data []byte
+	scanner := bufio.NewScanner(s.file)
+
+	for scanner.Scan() {
+		data = append(data, scanner.Bytes()...)
 	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			return
-		}
-
-	}()
-
-	scanner := bufio.NewScanner(file)
-
-	if !scanner.Scan() {
-		return nil, scanner.Err()
-	}
-	data := scanner.Bytes()
 
 	var res map[string]common_models.Metrics
-	err = json.Unmarshal(data, &res)
+	err := json.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
 	}
 
 	return res, nil
+}
+
+func (s *MetricsFileStorage) Close() error {
+	err := s.file.Close()
+	if err != nil {
+		return err
+	}
+	return nil
 }
