@@ -54,6 +54,9 @@ func (s *MetricsFileStorage) Read() (map[string]common_models.Metrics, error) {
 		data = append(data, scanner.Bytes()...)
 	}
 
+	if len(data) == 0 {
+		return map[string]common_models.Metrics{}, nil
+	}
 	var res map[string]common_models.Metrics
 	err := json.Unmarshal(data, &res)
 	if err != nil {
