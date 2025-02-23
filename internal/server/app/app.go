@@ -10,7 +10,7 @@ import (
 
 type App struct {
 	httpServer     *httpserver.HTTPServer
-	storageService service.StorageService
+	storageService *service.StorageService
 }
 
 func NewApp(cfg *config.ServerConfig) *App {
@@ -22,13 +22,9 @@ func NewApp(cfg *config.ServerConfig) *App {
 	metricsService := service.NewMetricsService(sService)
 	http := httpserver.NewRouter(cfg.HTTP, metricsService, log)
 
-	err := sService.Start()
-	if err != nil {
-		return nil
-	}
-
 	return &App{
-		httpServer: http,
+		httpServer:     http,
+		storageService: sService,
 	}
 }
 
