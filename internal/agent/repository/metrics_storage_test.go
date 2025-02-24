@@ -24,24 +24,22 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 			name: "test get empty metrics",
 			fields: fields{
 				storage: models.Metrics{
-					Gauge: map[string]any{
+					Gauge: map[string]float64{
 						"gauge1": 1,
 						"gauge2": 2.2,
 					},
 					Counter: models.CounterMetrics{
-						PollCount:   1,
-						RandomValue: 123,
+						PollCount: 1,
 					},
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]any{
+				Gauge: map[string]float64{
 					"gauge1": 1,
 					"gauge2": 2.2,
 				},
 				Counter: models.CounterMetrics{
-					PollCount:   1,
-					RandomValue: 123,
+					PollCount: 1,
 				},
 			},
 		},
@@ -71,13 +69,13 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]any{
-					"gauge1": 1,
-					"gauge2": 2.2,
+				Gauge: map[string]float64{
+					"gauge1":      1,
+					"gauge2":      2.2,
+					"RandomValue": 1,
 				},
 				Counter: models.CounterMetrics{
-					PollCount:   1,
-					RandomValue: 1,
+					PollCount: 1,
 				},
 			},
 		},
@@ -95,14 +93,14 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]any{
-					"gauge1": 1,
-					"gauge2": 2,
-					"gauge3": 3.3,
+				Gauge: map[string]float64{
+					"gauge1":      1,
+					"gauge2":      2,
+					"gauge3":      3.3,
+					"RandomValue": 1,
 				},
 				Counter: models.CounterMetrics{
-					PollCount:   2,
-					RandomValue: 1,
+					PollCount: 2,
 				},
 			},
 		},
@@ -116,7 +114,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 			}
 			for _, val := range tt.args {
 				s.SaveMetrics(val)
-				s.storage.Counter.RandomValue = 1
+				s.storage.Gauge["RandomValue"] = 1
 			}
 			assert.Equal(t, tt.want, s.storage)
 		})
@@ -132,7 +130,7 @@ func TestNewMetricsStorage(t *testing.T) {
 			name: "test storage creation",
 			want: &MetricsStorage{
 				storage: models.Metrics{
-					Gauge:   map[string]any{},
+					Gauge:   map[string]float64{},
 					Counter: models.CounterMetrics{},
 				},
 			},

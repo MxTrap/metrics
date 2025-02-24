@@ -1,98 +1,58 @@
 package service
 
 import (
-	"strings"
-
+	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/server/models"
 )
 
-type Storage interface {
-	gaugeMetricsStorage
-	counterMetricsStorage
+type MetricStorageService interface {
+	Save(metrics common_models.Metrics)
+	Find(metric string) (common_models.Metrics, bool)
 	GetAll() map[string]any
 }
 
-type metricTypes map[string]metricTypeService
-
-type metricTypeService interface {
-	Save(metric string, value string) error
-	Find(metric string) (any, bool)
-}
-
-func (t metricTypes) GetMetricTypeService(metricType string) (metricTypeService, bool) {
-	val, ok := t[metricType]
-	return val, ok
-}
-
 type MetricsService struct {
-	metricTypes metricTypes
-	storage     Storage
+	storageService MetricStorageService
 }
 
-func NewMetricsService(storage Storage) *MetricsService {
+func NewMetricsService(sService MetricStorageService) *MetricsService {
 
 	return &MetricsService{
-		storage: storage,
-		metricTypes: metricTypes{
-			"gauge":   NewGaugeMetricService(storage),
-			"counter": NewCounterMetricService(storage),
-		},
+		storageService: sService,
 	}
 }
 
-func (*MetricsService) parseURL(url string, searchWord string) ([]string, error) {
-	idx := strings.Index(url, searchWord+"/")
-	if idx == -1 {
-		return nil, models.ErrNotFoundMetric
-	}
-	splitedURL := strings.Split(url[idx+len(searchWord)+1:], "/")
-
-	if len(splitedURL) < 2 {
-		return nil, models.ErrNotFoundMetric
-	}
-	return splitedURL, nil
+func (MetricsService) validateMetric(metricType string) bool {
+	_, ok := models.MetricTypes[metricType]
+	return ok
 }
 
-func (s *MetricsService) Save(url string) error {
-	parsedMetric, err := s.parseURL(url, "update")
-	if err != nil {
-		return err
-	}
-	if len(parsedMetric) < 3 {
-		return models.ErrWrongMetricValue
-	}
-	metricType, metric, metricValue := parsedMetric[0], parsedMetric[1], parsedMetric[2]
-
-	acceptedMetricType, ok := s.metricTypes.GetMetricTypeService(metricType)
-	if !ok {
+func (s *MetricsService) Save(metric common_models.Metrics) error {
+	if !s.validateMetric(metric.MType) {
 		return models.ErrUnknownMetricType
 	}
 
-	err = acceptedMetricType.Save(metric, metricValue)
-	if err != nil {
-		return err
+	if metric.Delta == nil && metric.Value == nil {
+		return models.ErrWrongMetricValue
 	}
+
+	s.storageService.Save(metric)
 
 	return nil
 }
 
-func (s *MetricsService) Find(url string) (any, error) {
-	parsedMetric, err := s.parseURL(url, "value")
-	if err != nil {
-		return nil, err
+func (s *MetricsService) Find(metric common_models.Metrics) (common_models.Metrics, error) {
+	if !s.validateMetric(metric.MType) {
+		return common_models.Metrics{}, models.ErrUnknownMetricType
 	}
-	metricType, metric := parsedMetric[0], parsedMetric[1]
-	metricFunc, ok := s.metricTypes.GetMetricTypeService(metricType)
+	val, ok := s.storageService.Find(metric.ID)
 	if !ok {
-		return nil, models.ErrUnknownMetricType
+		return common_models.Metrics{}, models.ErrNotFoundMetric
 	}
-	val, ok := metricFunc.Find(metric)
-	if !ok {
-		return nil, models.ErrNotFoundMetric
-	}
+
 	return val, nil
 }
 
 func (s *MetricsService) GetAll() map[string]any {
-	return s.storage.GetAll()
+	return s.storageService.GetAll()
 }

@@ -1,46 +1,35 @@
 package repository
 
+import (
+	"github.com/MxTrap/metrics/internal/common/models"
+)
+
 type MemStorage struct {
-	gauge   map[string]float64
-	counter map[string]int64
+	metrics map[string]models.Metrics
 }
 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
-		gauge:   map[string]float64{},
-		counter: map[string]int64{},
+		metrics: map[string]models.Metrics{},
 	}
 }
 
-func (s *MemStorage) SaveGaugeMetric(metric string, value float64) {
-	s.gauge[metric] = value
-}
-
-func (s *MemStorage) SaveCounterMetric(metric string, value int64) {
-	storedVal, ok := s.counter[metric]
-	if !ok {
-		storedVal = 0
+func (s *MemStorage) Save(metric models.Metrics) {
+	if val, ok := s.metrics[metric.ID]; ok && metric.MType == models.Counter {
+		*(metric.Delta) = *(metric.Delta) + *(val.Delta)
 	}
-	s.counter[metric] = storedVal + value
+	s.metrics[metric.ID] = metric
 }
 
-func (s *MemStorage) FindGaugeMetric(metric string) (float64, bool) {
-	value, ok := s.gauge[metric]
+func (s *MemStorage) Find(metric string) (models.Metrics, bool) {
+	value, ok := s.metrics[metric]
 	return value, ok
 }
 
-func (s *MemStorage) FindCounterMetric(metric string) (int64, bool) {
-	value, ok := s.counter[metric]
-	return value, ok
+func (s *MemStorage) GetAll() map[string]models.Metrics {
+	return s.metrics
 }
 
-func (s *MemStorage) GetAll() map[string]any {
-	dst := map[string]any{}
-	for k, v := range s.gauge {
-		dst[k] = v
-	}
-	for k, v := range s.counter {
-		dst[k] = v
-	}
-	return dst
+func (s *MemStorage) SaveAll(metrics map[string]models.Metrics) {
+	s.metrics = metrics
 }

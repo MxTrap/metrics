@@ -1,121 +1,110 @@
 package repository
 
 import (
+	common_models "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/common/utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestMemStorage_SaveCounterMetric(t *testing.T) {
-	type args struct {
-		metric string
-		value  int64
-	}
+func TestMemStorage_Save(t *testing.T) {
+	p1 := utils.MakePointer[int64](1)
+	p2 := utils.MakePointer[int64](2)
+	p3 := utils.MakePointer[int64](3)
+
 	tests := []struct {
 		name string
-		args []args
-		want map[string]int64
+		args []common_models.Metrics
+		want map[string]common_models.Metrics
 	}{
 		{
 			name: "Save counter metric",
-			args: []args{
-				{"metric", 1},
+			args: []common_models.Metrics{
+				{
+					ID:    "metric",
+					MType: "counter",
+					Delta: p1,
+				},
 			},
-			want: map[string]int64{
-				"metric": 1,
+			want: map[string]common_models.Metrics{
+				"metric": {
+					ID:    "metric",
+					MType: "counter",
+					Delta: p1,
+				},
 			},
 		},
 		{
 			name: "Save some counter metric",
-			args: []args{
-				{"metric1", 1},
-				{"metric2", 2},
-				{"metric3", 3},
+			args: []common_models.Metrics{
+				{
+					ID:    "metric1",
+					MType: "counter",
+					Delta: p1,
+				},
+				{
+					ID:    "metric2",
+					MType: "counter",
+					Delta: p2,
+				},
+				{
+					ID:    "metric3",
+					MType: "counter",
+					Delta: p3,
+				},
 			},
-			want: map[string]int64{
-				"metric1": 1,
-				"metric2": 2,
-				"metric3": 3,
+			want: map[string]common_models.Metrics{
+				"metric1": {
+					ID:    "metric1",
+					MType: "counter",
+					Delta: p1,
+				},
+				"metric2": {
+					ID:    "metric2",
+					MType: "counter",
+					Delta: p2,
+				},
+				"metric3": {
+					ID:    "metric3",
+					MType: "counter",
+					Delta: p3,
+				},
 			},
 		},
 		{
 			name: "Save same counter metrics",
-			args: []args{
-				{"metric1", 1},
-				{"metric1", 1},
+			args: []common_models.Metrics{
+				{
+					ID:    "metric1",
+					MType: "counter",
+					Delta: p1,
+				},
+				{
+					ID:    "metric1",
+					MType: "counter",
+					Delta: p2,
+				},
 			},
-			want: map[string]int64{
-				"metric1": 2,
+			want: map[string]common_models.Metrics{
+				"metric1": {
+					ID:    "metric1",
+					MType: "counter",
+					Delta: p2,
+				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &MemStorage{
-				counter: map[string]int64{},
+				metrics: map[string]common_models.Metrics{},
 			}
 			for _, arg := range tt.args {
-				s.SaveCounterMetric(arg.metric, arg.value)
+				s.Save(arg)
 			}
-			assert.Equal(t, tt.want, s.counter)
+			assert.Equal(t, tt.want, s.metrics)
 		})
 	}
-}
-
-func TestMemStorage_SaveGaugeMetric(t *testing.T) {
-	type args struct {
-		metric string
-		value  float64
-	}
-	tests := []struct {
-		name string
-		args []args
-		want map[string]float64
-	}{
-		{
-			name: "Save counter metric",
-			args: []args{
-				{"metric", 1.1},
-			},
-			want: map[string]float64{
-				"metric": 1.1,
-			},
-		},
-		{
-			name: "Save some counter metric",
-			args: []args{
-				{"metric1", 1.1},
-				{"metric2", 2.3},
-				{"metric3", 3},
-			},
-			want: map[string]float64{
-				"metric1": 1.1,
-				"metric2": 2.3,
-				"metric3": 3,
-			},
-		},
-		{
-			name: "Save same counter metrics",
-			args: []args{
-				{"metric", 1},
-				{"metric", 2.4},
-			},
-			want: map[string]float64{
-				"metric": 2.4,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &MemStorage{
-				gauge: map[string]float64{},
-			}
-			for _, arg := range tt.args {
-				s.SaveGaugeMetric(arg.metric, arg.value)
-			}
-			assert.Equal(t, tt.want, s.gauge)
-		})
-	}
-
 }
 
 func TestNewMemStorage(t *testing.T) {
@@ -126,8 +115,7 @@ func TestNewMemStorage(t *testing.T) {
 		{
 			name: "test storage creation",
 			want: &MemStorage{
-				counter: map[string]int64{},
-				gauge:   map[string]float64{},
+				metrics: map[string]common_models.Metrics{},
 			},
 		},
 	}

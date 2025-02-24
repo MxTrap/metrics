@@ -1,17 +1,20 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
+	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/gin-gonic/gin"
+	"github.com/mailru/easyjson"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/MxTrap/metrics/internal/server/models"
 )
 
 type MetricService interface {
-	Save(url string) error
-	Find(url string) (any, error)
+	Save(metrics common_models.Metrics) error
+	Find(metric common_models.Metrics) (common_models.Metrics, error)
 	GetAll() map[string]any
 }
 
@@ -25,22 +28,94 @@ func NewHandler(service MetricService) *Handler {
 	}
 }
 
-func (h Handler) Save(g *gin.Context) {
+func (Handler) parseMetric(rawData []byte) (common_models.Metrics, error) {
+	m := common_models.Metrics{}
+	err := easyjson.Unmarshal(rawData, &m)
+	if err != nil {
+		return common_models.Metrics{}, err
+	}
+	return m, nil
+}
 
-	if err := h.service.Save(g.Request.RequestURI); err != nil {
-		if errors.Is(err, models.ErrNotFoundMetric) {
-			g.Status(http.StatusNotFound)
-			return
+func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, error) {
+	idx := strings.Index(url, searchWord+"/")
+	if idx == -1 {
+		return common_models.Metrics{}, models.ErrNotFoundMetric
+	}
+	splitedURL := strings.Split(url[idx+len(searchWord)+1:], "/")
+
+	if len(splitedURL) < 2 {
+		return common_models.Metrics{}, models.ErrNotFoundMetric
+	}
+
+	metric := common_models.Metrics{
+		ID:    splitedURL[1],
+		MType: splitedURL[0],
+	}
+
+	if len(splitedURL) == 2 {
+		return metric, nil
+	}
+
+	val := splitedURL[2]
+
+	if metric.MType == common_models.Gauge {
+		parseFloat, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return common_models.Metrics{}, models.ErrWrongMetricValue
 		}
-		if errors.Is(err, models.ErrUnknownMetricType) {
-			g.Status(http.StatusBadRequest)
-			return
+		metric.Value = &parseFloat
+	}
+
+	if metric.MType == common_models.Counter {
+		parseInt, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return common_models.Metrics{}, models.ErrWrongMetricValue
 		}
-		if errors.Is(err, models.ErrWrongMetricValue) {
-			g.Status(http.StatusBadRequest)
-			return
-		}
-		g.Status(http.StatusInternalServerError)
+		metric.Delta = &parseInt
+	}
+
+	return metric, nil
+}
+
+func (Handler) getMetricValue(metric common_models.Metrics) any {
+	if metric.MType == common_models.Gauge {
+		return *metric.Value
+	}
+	if metric.MType == common_models.Counter {
+		return *metric.Delta
+	}
+	return nil
+}
+
+func (h Handler) SaveJSON(g *gin.Context) {
+	rawData, err := g.GetRawData()
+	if err != nil {
+		g.Status(http.StatusBadRequest)
+		return
+	}
+	m, err := h.parseMetric(rawData)
+
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+
+	err = h.service.Save(m)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+	g.Status(http.StatusOK)
+}
+
+func (h Handler) Save(g *gin.Context) {
+	m, err := h.parseURL(g.Request.RequestURI, "update")
+	if err == nil {
+		err = h.service.Save(m)
+	}
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
 
@@ -48,25 +123,38 @@ func (h Handler) Save(g *gin.Context) {
 }
 
 func (h Handler) Find(g *gin.Context) {
-	val, err := h.service.Find(g.Request.RequestURI)
+	m, err := h.parseURL(g.Request.RequestURI, "value")
 	if err == nil {
-		g.String(http.StatusOK, fmt.Sprintf("%v", val))
+		m, err = h.service.Find(m)
+	}
+
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
 
-	if errors.Is(err, models.ErrNotFoundMetric) {
-		g.Status(http.StatusNotFound)
+	g.String(http.StatusOK, fmt.Sprintf("%v", h.getMetricValue(m)))
+}
+
+func (h Handler) FindJSON(g *gin.Context) {
+	rawData, err := g.GetRawData()
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
-	if errors.Is(err, models.ErrUnknownMetricType) {
-		g.Status(http.StatusBadRequest)
+	metric, err := h.parseMetric(rawData)
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
-	if errors.Is(err, models.ErrWrongMetricValue) {
-		g.Status(http.StatusBadRequest)
+	m, err := h.service.Find(metric)
+	if err != nil {
+		_ = g.Error(err)
 		return
 	}
-	g.Status(http.StatusInternalServerError)
+
+	g.JSON(http.StatusOK, m)
+
 }
 
 func (h Handler) GetAll(g *gin.Context) {

@@ -1,9 +1,13 @@
 package httpclient
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/service"
+	common_moodels "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/mailru/easyjson"
 	"net/http"
 	"time"
 )
@@ -42,28 +46,82 @@ func (h *HTTPClient) Run() {
 	}(h.service)
 }
 
-func (h *HTTPClient) postMetric(metricType string, metric string, value any) {
-	resp, err := h.client.Post(
-		fmt.Sprintf("http://%s/update/%s/%s/%v", h.serverURL, metricType, metric, value),
-		"text/plain",
-		nil,
-	)
+func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
+	var b bytes.Buffer
+
+	gz, err := gzip.NewWriterLevel(&b, gzip.BestSpeed)
+	defer func(gz *gzip.Writer) {
+		err := gz.Close()
+		if err != nil {
+			fmt.Println("failed to close gzip writer")
+		}
+	}(gz)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("failed init compress writer: %v", err)
+	}
+
+	_, err = gz.Write(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
+	}
+
+	err = gz.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed compress data: %v", err)
+	}
+
+	return &b, nil
+}
+
+func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
+	body, err := easyjson.Marshal(metric)
+
+	if err != nil {
+		return err
+	}
+
+	compressed, err := h.compress(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/", h.serverURL), compressed)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return err
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		return
+		return err
 	}
+	return nil
 }
 
 func (h *HTTPClient) sendMetrics() {
 	metrics := h.service.GetMetrics()
 
 	for key, val := range metrics.Gauge {
-		h.postMetric("gauge", key, val)
+		err := h.postMetric(common_moodels.Metrics{
+			ID:    key,
+			MType: common_moodels.Gauge,
+			Value: &val,
+		})
+		if err != nil {
+			return
+		}
 	}
-	h.postMetric("counter", "PollCount", metrics.Counter.PollCount)
-	h.postMetric("counter", "RandomValue", metrics.Counter.RandomValue)
 
+	err := h.postMetric(common_moodels.Metrics{
+		ID:    "PollCount",
+		MType: common_moodels.Counter,
+		Delta: &metrics.Counter.PollCount,
+	})
+	if err != nil {
+		return
+	}
 }
