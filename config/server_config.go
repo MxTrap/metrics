@@ -11,12 +11,14 @@ type ServerConfig struct {
 	StoreInterval   int        `env:"STORE_INTERVAL"`
 	FileStoragePath string     `env:"FILE_STORAGE_PATH"`
 	Restore         bool       `env:"RESTORE"`
+	DatabaseDSN     string     `env:"DATABASE_DSN"`
 }
 
 func NewServerConfig() (*ServerConfig, error) {
 	sInterval := flag.Int("i", 300, "interval of saving data to file")
 	sPath := flag.String("f", "./temp.txt", "path to file")
 	restore := flag.Bool("r", false, "restore data")
+	databaseDSN := flag.String("d", "localhost:5432", "database DSN")
 	httpConfig := NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
@@ -26,6 +28,7 @@ func NewServerConfig() (*ServerConfig, error) {
 		StoreInterval:   *sInterval,
 		FileStoragePath: *sPath,
 		Restore:         *restore,
+		DatabaseDSN:     *databaseDSN,
 	}
 
 	err := env.ParseWithFuncs(cfg, map[reflect.Type]env.ParserFunc{

@@ -18,17 +18,30 @@ type MetricService interface {
 	GetAll() map[string]any
 }
 
-type Handler struct {
+type MetricsHandler struct {
+	router  *gin.Engine
 	service MetricService
 }
 
-func NewHandler(service MetricService) *Handler {
-	return &Handler{
+func NewMetricHandler(service MetricService, router *gin.Engine) *MetricsHandler {
+	handler := &MetricsHandler{
 		service: service,
+		router:  router,
 	}
+	handler.registerRoutes()
+	return handler
 }
 
-func (Handler) parseMetric(rawData []byte) (common_models.Metrics, error) {
+func (h MetricsHandler) registerRoutes() {
+	uri := "/:metricType/:metricName"
+	h.router.GET("/value"+uri, h.Find)
+	h.router.POST("/update/", h.SaveJSON)
+	h.router.POST(fmt.Sprintf("/update/%s/:metricValue", uri), h.Save)
+	h.router.POST("/value/", h.FindJSON)
+	h.router.GET("/", h.GetAll)
+}
+
+func (MetricsHandler) parseMetric(rawData []byte) (common_models.Metrics, error) {
 	m := common_models.Metrics{}
 	err := easyjson.Unmarshal(rawData, &m)
 	if err != nil {
@@ -37,7 +50,7 @@ func (Handler) parseMetric(rawData []byte) (common_models.Metrics, error) {
 	return m, nil
 }
 
-func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, error) {
+func (MetricsHandler) parseURL(url string, searchWord string) (common_models.Metrics, error) {
 	idx := strings.Index(url, searchWord+"/")
 	if idx == -1 {
 		return common_models.Metrics{}, models.ErrNotFoundMetric
@@ -78,7 +91,7 @@ func (Handler) parseURL(url string, searchWord string) (common_models.Metrics, e
 	return metric, nil
 }
 
-func (Handler) getMetricValue(metric common_models.Metrics) any {
+func (MetricsHandler) getMetricValue(metric common_models.Metrics) any {
 	if metric.MType == common_models.Gauge {
 		return *metric.Value
 	}
@@ -88,7 +101,7 @@ func (Handler) getMetricValue(metric common_models.Metrics) any {
 	return nil
 }
 
-func (h Handler) SaveJSON(g *gin.Context) {
+func (h MetricsHandler) SaveJSON(g *gin.Context) {
 	rawData, err := g.GetRawData()
 	if err != nil {
 		g.Status(http.StatusBadRequest)
@@ -109,7 +122,7 @@ func (h Handler) SaveJSON(g *gin.Context) {
 	g.Status(http.StatusOK)
 }
 
-func (h Handler) Save(g *gin.Context) {
+func (h MetricsHandler) Save(g *gin.Context) {
 	m, err := h.parseURL(g.Request.RequestURI, "update")
 	if err == nil {
 		err = h.service.Save(m)
@@ -122,7 +135,7 @@ func (h Handler) Save(g *gin.Context) {
 	g.Status(http.StatusOK)
 }
 
-func (h Handler) Find(g *gin.Context) {
+func (h MetricsHandler) Find(g *gin.Context) {
 	m, err := h.parseURL(g.Request.RequestURI, "value")
 	if err == nil {
 		m, err = h.service.Find(m)
@@ -136,7 +149,7 @@ func (h Handler) Find(g *gin.Context) {
 	g.String(http.StatusOK, fmt.Sprintf("%v", h.getMetricValue(m)))
 }
 
-func (h Handler) FindJSON(g *gin.Context) {
+func (h MetricsHandler) FindJSON(g *gin.Context) {
 	rawData, err := g.GetRawData()
 	if err != nil {
 		_ = g.Error(err)
@@ -157,7 +170,7 @@ func (h Handler) FindJSON(g *gin.Context) {
 
 }
 
-func (h Handler) GetAll(g *gin.Context) {
+func (h MetricsHandler) GetAll(g *gin.Context) {
 	g.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"metrics": h.service.GetAll(),
 	})
