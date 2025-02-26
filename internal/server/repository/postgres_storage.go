@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -12,7 +13,7 @@ type PostgresStorage struct {
 func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage, error) {
 	db, err := pgxpool.New(ctx, conString)
 	if err != nil {
-		return nil, err
+		return &PostgresStorage{}, err
 	}
 	return &PostgresStorage{
 		db: db,
@@ -20,11 +21,10 @@ func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage
 }
 
 func (s *PostgresStorage) Ping() error {
-	err := s.db.Ping(context.Background())
-	if err != nil {
-		return err
+	if s.db == nil {
+		return errors.New("database not initialized")
 	}
-	return nil
+	return s.db.Ping(context.Background())
 }
 
 func (s *PostgresStorage) Close() {

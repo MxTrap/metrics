@@ -34,7 +34,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 	httpRouter.Router.GET("/ping", func(c *gin.Context) {
 		err := pgStorage.Ping()
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
+			c.Error(err)
 		}
 		c.Status(http.StatusOK)
 	})
