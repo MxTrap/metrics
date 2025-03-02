@@ -15,6 +15,7 @@ type App struct {
 	httpServer     *httpserver.HTTPServer
 	storageService *service.StorageService
 	ctx            context.Context
+	migrator       *migrator.Migrator
 }
 
 func NewApp(cfg *config.ServerConfig) *App {
@@ -24,6 +25,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 	fileStorage := repository.NewMetricsFileStorage(cfg.FileStoragePath)
 	var storage service.Storage
 	var storageErr error
+	var m *migrator.Migrator
 	storage, storageErr = repository.NewMemStorage()
 	if cfg.DatabaseDSN != "" {
 		m, err := migrator.NewMigrator(cfg.DatabaseDSN)
@@ -52,6 +54,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 		httpServer:     httpRouter,
 		storageService: sService,
 		ctx:            ctx,
+		migrator:       m,
 	}
 }
 
@@ -61,8 +64,4 @@ func (a App) Run() {
 		return
 	}
 	a.httpServer.Run()
-}
-
-func (a App) Stop() {
-	a.storageService.Stop()
 }

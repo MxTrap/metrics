@@ -2,10 +2,8 @@ package repository
 
 import (
 	"context"
-
 	"errors"
 	"github.com/MxTrap/metrics/internal/common/models"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

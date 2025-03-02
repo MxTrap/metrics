@@ -1,7 +1,3 @@
-DROP TABLE IF EXISTS schema_migration;
-DROP TABLE IF EXISTS metric;
-DROP TABLE IF EXISTS metric_type;
-
 CREATE TABLE metric_type
 (
     id            SERIAL       PRIMARY KEY,
