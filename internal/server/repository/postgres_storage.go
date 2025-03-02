@@ -2,16 +2,12 @@ package repository
 
 import (
 	"context"
+
 	"errors"
-	"fmt"
 	"github.com/MxTrap/metrics/internal/common/models"
-	"github.com/MxTrap/metrics/internal/utils"
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/lib/pq"
 )
 
 type PostgresStorage struct {
@@ -33,17 +29,10 @@ func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage
 		return &PostgresStorage{}, err
 	}
 
-	pgStorage := &PostgresStorage{
+	return &PostgresStorage{
 		db:      db,
 		connStr: conString,
-	}
-
-	err = pgStorage.initializeDB()
-	if err != nil {
-		return pgStorage, err
-	}
-
-	return pgStorage, nil
+	}, nil
 }
 
 func (PostgresStorage) mapCommonToDBMetric(metric models.Metrics) dbMetric {
@@ -201,22 +190,6 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 		return err
 	}
 
-	return nil
-}
-
-func (s *PostgresStorage) initializeDB() error {
-	m, err := migrate.New(
-		fmt.Sprintf("file://%s", utils.GetProjectPath()+"/migrations"),
-		s.connStr,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	if err := m.Up(); err != nil {
-		return err
-	}
 	return nil
 }
 

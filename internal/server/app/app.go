@@ -6,6 +6,7 @@ import (
 	"github.com/MxTrap/metrics/internal/server/httpserver"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
 	"github.com/MxTrap/metrics/internal/server/logger"
+	"github.com/MxTrap/metrics/internal/server/migrator"
 	"github.com/MxTrap/metrics/internal/server/repository"
 	"github.com/MxTrap/metrics/internal/server/service"
 )
@@ -25,6 +26,14 @@ func NewApp(cfg *config.ServerConfig) *App {
 	var storageErr error
 	storage, storageErr = repository.NewMemStorage()
 	if cfg.DatabaseDSN != "" {
+		m, err := migrator.NewMigrator(cfg.DatabaseDSN)
+		if err != nil {
+			return nil
+		}
+		err = m.InitializeDB()
+		if err != nil {
+			return nil
+		}
 		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN)
 	}
 	if storageErr != nil {
