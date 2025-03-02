@@ -45,7 +45,7 @@ func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage
 	return pgStorage, nil
 }
 
-func (PostgresStorage) mapCommonToDbMetric(metric models.Metrics) dbMetric {
+func (PostgresStorage) mapCommonToDBMetric(metric models.Metrics) dbMetric {
 	return dbMetric{
 		MType: metric.MType,
 		Name:  metric.ID,
@@ -54,7 +54,7 @@ func (PostgresStorage) mapCommonToDbMetric(metric models.Metrics) dbMetric {
 	}
 }
 
-func (PostgresStorage) mapDbToCommonMetric(metric dbMetric) models.Metrics {
+func (PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metrics {
 	return models.Metrics{
 		ID:    metric.Name,
 		MType: metric.MType,
@@ -109,7 +109,7 @@ func (s *PostgresStorage) Find(ctx context.Context, metric string) (models.Metri
 		return models.Metrics{}, err
 	}
 
-	return s.mapDbToCommonMetric(m), nil
+	return s.mapDBToCommonMetric(m), nil
 }
 
 func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics, error) {
@@ -128,7 +128,7 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics
 	}
 	cMetrics := make(map[string]models.Metrics, len(metrics))
 	for _, m := range metrics {
-		cMetrics[m.Name] = s.mapDbToCommonMetric(m)
+		cMetrics[m.Name] = s.mapDBToCommonMetric(m)
 	}
 	return cMetrics, nil
 }
