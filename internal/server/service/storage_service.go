@@ -2,18 +2,18 @@ package service
 
 import (
 	"context"
-	common_models "github.com/MxTrap/metrics/internal/common/models"
+	commonmodels "github.com/MxTrap/metrics/internal/common/models"
 	"time"
 )
 
 type storageGetter interface {
-	GetAll(ctx context.Context) (map[string]common_models.Metrics, error)
-	Find(ctx context.Context, metric string) (common_models.Metrics, error)
+	GetAll(ctx context.Context) (map[string]commonmodels.Metrics, error)
+	Find(ctx context.Context, metric string) (commonmodels.Metrics, error)
 }
 
 type storageSaver interface {
-	Save(ctx context.Context, metrics common_models.Metrics) error
-	SaveAll(ctx context.Context, metrics map[string]common_models.Metrics) error
+	Save(ctx context.Context, metrics commonmodels.Metrics) error
+	SaveAll(ctx context.Context, metrics map[string]commonmodels.Metrics) error
 }
 
 type Storage interface {
@@ -23,8 +23,8 @@ type Storage interface {
 }
 
 type FileStorage interface {
-	Save(metrics map[string]common_models.Metrics) error
-	Read() (map[string]common_models.Metrics, error)
+	Save(metrics map[string]commonmodels.Metrics) error
+	Read() (map[string]commonmodels.Metrics, error)
 	Close() error
 }
 
@@ -45,7 +45,7 @@ func NewStorageService(fileStorage FileStorage, storage Storage, saveInterval in
 	}
 }
 
-func (s *StorageService) Save(ctx context.Context, metrics common_models.Metrics) error {
+func (s *StorageService) Save(ctx context.Context, metrics commonmodels.Metrics) error {
 	err := s.storage.Save(ctx, metrics)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (s *StorageService) Save(ctx context.Context, metrics common_models.Metrics
 	}
 	return nil
 }
-func (s *StorageService) Find(ctx context.Context, metric string) (common_models.Metrics, error) {
+func (s *StorageService) Find(ctx context.Context, metric string) (commonmodels.Metrics, error) {
 	return s.storage.Find(ctx, metric)
 }
 func (s *StorageService) GetAll(ctx context.Context) (map[string]any, error) {
