@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"time"
 )
@@ -99,7 +98,6 @@ func (s *StorageService) Ping(ctx context.Context) error {
 func (s *StorageService) Start(ctx context.Context) error {
 	if s.restore {
 		read, err := s.fileStorage.Read()
-		fmt.Println(read, err)
 		if err != nil {
 			return err
 		}
