@@ -1,24 +1,26 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"time"
 )
 
 type storageGetter interface {
-	GetAll() map[string]common_models.Metrics
-	Find(metric string) (common_models.Metrics, bool)
+	GetAll(ctx context.Context) (map[string]common_models.Metrics, error)
+	Find(ctx context.Context, metric string) (common_models.Metrics, error)
 }
 
 type storageSaver interface {
-	Save(metrics common_models.Metrics)
-	SaveAll(metrics map[string]common_models.Metrics)
+	Save(ctx context.Context, metrics common_models.Metrics) error
+	SaveAll(ctx context.Context, metrics map[string]common_models.Metrics) error
 }
 
 type Storage interface {
 	storageGetter
 	storageSaver
+	Ping(ctx context.Context) error
 }
 
 type FileStorage interface {
@@ -44,18 +46,28 @@ func NewStorageService(fileStorage FileStorage, storage Storage, saveInterval in
 	}
 }
 
-func (s *StorageService) Save(metrics common_models.Metrics) {
-	s.storage.Save(metrics)
-	if s.saveInterval == 0 {
-		s.saveToFile()
+func (s *StorageService) Save(ctx context.Context, metrics common_models.Metrics) error {
+	err := s.storage.Save(ctx, metrics)
+	if err != nil {
+		return err
 	}
+	if s.saveInterval == 0 {
+		err := s.saveToFile(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
-func (s *StorageService) Find(metric string) (common_models.Metrics, bool) {
-	return s.storage.Find(metric)
+func (s *StorageService) Find(ctx context.Context, metric string) (common_models.Metrics, error) {
+	return s.storage.Find(ctx, metric)
 }
-func (s *StorageService) GetAll() map[string]any {
+func (s *StorageService) GetAll(ctx context.Context) (map[string]any, error) {
 	dst := map[string]any{}
-	metrics := s.storage.GetAll()
+	metrics, err := s.storage.GetAll(ctx)
+	if err != nil {
+		return dst, err
+	}
 	for k, v := range metrics {
 		var val any
 		if v.Delta != nil {
@@ -66,31 +78,45 @@ func (s *StorageService) GetAll() map[string]any {
 		}
 		dst[k] = val
 	}
-	return dst
+	return dst, nil
 }
 
-func (s *StorageService) saveToFile() {
-	err := s.fileStorage.Save(s.storage.GetAll())
+func (s *StorageService) saveToFile(ctx context.Context) error {
+	all, err := s.storage.GetAll(ctx)
 	if err != nil {
-		return
+		return err
 	}
+	err = s.fileStorage.Save(all)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (s *StorageService) Ping(ctx context.Context) error {
+	return s.storage.Ping(ctx)
 }
 
-func (s *StorageService) Start() error {
+func (s *StorageService) Start(ctx context.Context) error {
 	if s.restore {
 		read, err := s.fileStorage.Read()
 		fmt.Println(read, err)
 		if err != nil {
 			return err
 		}
-		s.storage.SaveAll(read)
+		err = s.storage.SaveAll(ctx, read)
+		if err != nil {
+			return err
+		}
 	}
 
 	if s.saveInterval > 0 {
 		s.ticker = time.NewTicker(time.Duration(s.saveInterval) * time.Second)
 		go func() {
 			for range s.ticker.C {
-				s.saveToFile()
+				err := s.saveToFile(ctx)
+				if err != nil {
+					return
+				}
 			}
 		}()
 	}

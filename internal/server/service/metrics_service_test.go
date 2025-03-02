@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/common/utils"
 	"github.com/stretchr/testify/assert"
@@ -14,16 +16,20 @@ type mockStorage struct {
 	metrics map[string]common_models.Metrics
 }
 
-func (s *mockStorage) Save(metric common_models.Metrics) {
+func (s *mockStorage) Save(_ context.Context, metric common_models.Metrics) error {
 	s.metrics[metric.ID] = metric
+	return nil
 }
 
-func (s *mockStorage) Find(metric string) (common_models.Metrics, bool) {
+func (s *mockStorage) Find(_ context.Context, metric string) (common_models.Metrics, error) {
 	value, ok := s.metrics[metric]
-	return value, ok
+	if !ok {
+		return common_models.Metrics{}, errors.New("not found")
+	}
+	return value, nil
 }
 
-func (s *mockStorage) GetAll() map[string]any {
+func (s *mockStorage) GetAll(_ context.Context) (map[string]any, error) {
 	dst := map[string]any{}
 	for k, v := range s.metrics {
 		var val any
@@ -35,8 +41,13 @@ func (s *mockStorage) GetAll() map[string]any {
 		}
 		dst[k] = val
 	}
-	return dst
+	return dst, nil
 }
+
+func (s mockStorage) Ping(_ context.Context) error {
+	return nil
+}
+
 func newMockStorage() MetricStorageService {
 	return &mockStorage{map[string]common_models.Metrics{
 		"gauge1": {
@@ -102,9 +113,10 @@ func TestMetricsService_Find(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newMockService()
-			got, err := s.Find(tt.metric)
+			ctx := context.Background()
+			got, err := s.Find(ctx, tt.metric)
 			if (err != nil) != tt.wantErr {
-				assert.Errorf(t, err, "Find() error = %v, wantErr %v", err, tt.wantErr)
+				assert.Errorf(t, err, "find() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.Equal(t, tt.want, got)
@@ -134,9 +146,14 @@ func TestMetricsService_GetAll(t *testing.T) {
 			},
 		},
 	}
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.service.GetAll())
+			all, err := tt.service.GetAll(ctx)
+			if err != nil {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, all)
 		})
 	}
 }
@@ -177,8 +194,9 @@ func TestMetricsService_Save(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newMockService()
-			if err := s.Save(tt.metric); (err != nil) != tt.wantErr {
-				assert.Errorf(t, err, "Save() error = %v, wantErr %v", err, tt.wantErr)
+			ctx := context.Background()
+			if err := s.Save(ctx, tt.metric); (err != nil) != tt.wantErr {
+				assert.Errorf(t, err, "save() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

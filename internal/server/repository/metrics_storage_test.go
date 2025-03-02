@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/common/utils"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ func TestMemStorage_Save(t *testing.T) {
 		want map[string]common_models.Metrics
 	}{
 		{
-			name: "Save counter metric",
+			name: "save counter metric",
 			args: []common_models.Metrics{
 				{
 					ID:    "metric",
@@ -35,7 +36,7 @@ func TestMemStorage_Save(t *testing.T) {
 			},
 		},
 		{
-			name: "Save some counter metric",
+			name: "save some counter metric",
 			args: []common_models.Metrics{
 				{
 					ID:    "metric1",
@@ -72,7 +73,7 @@ func TestMemStorage_Save(t *testing.T) {
 			},
 		},
 		{
-			name: "Save same counter metrics",
+			name: "save same counter metrics",
 			args: []common_models.Metrics{
 				{
 					ID:    "metric1",
@@ -99,8 +100,10 @@ func TestMemStorage_Save(t *testing.T) {
 			s := &MemStorage{
 				metrics: map[string]common_models.Metrics{},
 			}
+			ctx := context.TODO()
 			for _, arg := range tt.args {
-				s.Save(arg)
+				err := s.Save(ctx, arg)
+				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.want, s.metrics)
 		})
@@ -120,8 +123,10 @@ func TestNewMemStorage(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		storage, err := NewMemStorage()
+		assert.NoError(t, err)
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, NewMemStorage(), tt.want)
+			assert.Equal(t, storage, tt.want)
 		})
 	}
 }
