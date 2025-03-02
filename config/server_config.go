@@ -18,7 +18,8 @@ func NewServerConfig() (*ServerConfig, error) {
 	sInterval := flag.Int("i", 300, "interval of saving data to file")
 	sPath := flag.String("f", "./temp.txt", "path to file")
 	restore := flag.Bool("r", false, "restore data")
-	databaseDSN := flag.String("d", "", "database DSN")
+	//"postgres://postgres:admin@localhost:5432/metrics?sslmode=disable"
+	databaseDSN := flag.String("d", "postgres://postgres:admin@localhost:5432/metrics?sslmode=disable", "database DSN")
 	httpConfig := NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()

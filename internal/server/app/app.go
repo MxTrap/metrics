@@ -28,11 +28,13 @@ func NewApp(cfg *config.ServerConfig) *App {
 	if cfg.DatabaseDSN != "" {
 		m, err := migrator.NewMigrator(cfg.DatabaseDSN)
 		if err != nil {
+			log.Logger.Error("could not create migrator ", err)
 			return nil
 		}
 		err = m.InitializeDB()
+
 		if err != nil {
-			return nil
+			log.Logger.Error("could not initialize database ", err)
 		}
 		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN)
 	}
