@@ -28,16 +28,16 @@ func NewApp(cfg *config.ServerConfig) *App {
 	var m *migrator.Migrator
 	storage, storageErr = repository.NewMemStorage()
 	if cfg.DatabaseDSN != "" {
-		m, err := migrator.NewMigrator(cfg.DatabaseDSN)
-		if err != nil {
-			log.Logger.Error("could not create migrator ", err)
-			return nil
-		}
-		err = m.InitializeDB()
+		//m, err := migrator.NewMigrator(cfg.DatabaseDSN)
+		//if err != nil {
+		//	log.Logger.Error("could not create migrator ", err)
+		//	return nil
+		//}
+		//err = m.InitializeDB()
 
-		if err != nil {
-			log.Logger.Error("could not initialize database ", err)
-		}
+		//if err != nil {
+		//	log.Logger.Error("could not initialize database ", err)
+		//}
 		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN)
 	}
 	if storageErr != nil {
