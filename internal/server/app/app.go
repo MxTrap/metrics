@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/httpserver"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
@@ -40,7 +39,6 @@ func NewApp(cfg *config.ServerConfig) *App {
 		//if err != nil {
 		//	log.Logger.Error("could not initialize database ", err)
 		//}
-		fmt.Println(cfg.DatabaseDSN)
 		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN)
 	}
 	if storageErr != nil {

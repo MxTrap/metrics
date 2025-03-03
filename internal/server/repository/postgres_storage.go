@@ -25,7 +25,6 @@ type dbMetric struct {
 func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage, error) {
 	db, err := pgxpool.New(ctx, conString)
 	if err != nil {
-		fmt.Println(err)
 		return &PostgresStorage{}, err
 	}
 
@@ -57,7 +56,9 @@ func (s *PostgresStorage) Ping(ctx context.Context) error {
 	if s.db == nil {
 		return errors.New("database not initialized")
 	}
-	return s.db.Ping(ctx)
+	err := s.db.Ping(ctx)
+	fmt.Println(err)
+	return err
 }
 
 func (s *PostgresStorage) Save(ctx context.Context, metric models.Metrics) error {
