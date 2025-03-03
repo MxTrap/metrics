@@ -16,7 +16,13 @@ type Migrator struct {
 
 func NewMigrator(connString string) (*Migrator, error) {
 	db, err := sql.Open("postgres", connString)
+	if err != nil {
+		return nil, err
+	}
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return nil, err
+	}
 	m, err := migrate.NewWithDatabaseInstance(
 		fmt.Sprintf("file://%s", utils.GetProjectPath()+"/migrations"),
 		"postgres", driver)
