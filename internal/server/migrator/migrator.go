@@ -2,12 +2,14 @@ package migrator
 
 import (
 	_ "database/sql"
+	_ "github.com/lib/pq"
+
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+
 	"fmt"
 	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
 )
 
 type Migrator struct {
