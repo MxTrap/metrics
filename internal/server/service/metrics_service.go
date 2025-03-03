@@ -47,8 +47,22 @@ func (s *MetricsService) Save(ctx context.Context, metric common_models.Metric) 
 	return nil
 }
 
-func (s *MetricsService) SaveAll(ctx context.Context, metrics map[string]common_models.Metric) error {
-	err := s.storageService.SaveAll(ctx, metrics)
+func (s *MetricsService) SaveAll(ctx context.Context, metrics []common_models.Metric) error {
+	m := make(map[string]common_models.Metric)
+	for _, metric := range metrics {
+		if s.validateMetric(metric.MType) {
+			if metric.MType == common_models.Counter {
+				val, ok := m[metric.ID]
+				if ok {
+					*val.Delta = *metric.Delta + *val.Delta
+					m[metric.ID] = val
+					continue
+				}
+			}
+			m[metric.ID] = metric
+		}
+	}
+	err := s.storageService.SaveAll(ctx, m)
 	if err != nil {
 		return err
 	}

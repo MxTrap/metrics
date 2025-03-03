@@ -16,7 +16,7 @@ import (
 
 type MetricService interface {
 	Save(ctx context.Context, metrics common_models.Metric) error
-	SaveAll(ctx context.Context, metrics map[string]common_models.Metric) error
+	SaveAll(ctx context.Context, metrics []common_models.Metric) error
 	Find(ctx context.Context, metric common_models.Metric) (common_models.Metric, error)
 	GetAll(ctx context.Context) (map[string]any, error)
 	Ping(ctx context.Context) error
@@ -119,12 +119,7 @@ func (h MetricsHandler) saveAll(g *gin.Context) {
 		return
 	}
 
-	metrics := make(map[string]common_models.Metric)
-	for _, v := range m {
-		metrics[v.ID] = v
-	}
-
-	err = h.service.SaveAll(g, metrics)
+	err = h.service.SaveAll(g, m)
 	if err != nil {
 		g.Status(http.StatusInternalServerError)
 		return
