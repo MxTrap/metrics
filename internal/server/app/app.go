@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/httpserver"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
@@ -60,6 +61,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 
 func (a App) Run() {
 	err := a.storageService.Start(a.ctx)
+	fmt.Println(err)
 	if err != nil {
 		return
 	}
