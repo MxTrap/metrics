@@ -17,6 +17,7 @@ type App struct {
 	storageService *service.StorageService
 	ctx            context.Context
 	migrator       *migrator.Migrator
+	logger         *logger.Logger
 }
 
 func NewApp(cfg *config.ServerConfig) *App {
@@ -39,6 +40,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 		//if err != nil {
 		//	log.Logger.Error("could not initialize database ", err)
 		//}
+		fmt.Println(cfg.DatabaseDSN)
 		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN)
 	}
 	if storageErr != nil {
@@ -56,14 +58,19 @@ func NewApp(cfg *config.ServerConfig) *App {
 		storageService: sService,
 		ctx:            ctx,
 		migrator:       m,
+		logger:         log,
 	}
 }
 
 func (a App) Run() {
 	err := a.storageService.Start(a.ctx)
-	fmt.Println(err)
 	if err != nil {
+		a.logger.Logger.Error(err.Error())
 		return
 	}
-	a.httpServer.Run()
+	err = a.httpServer.Run()
+	if err != nil {
+		a.logger.Logger.Error(err)
+		return
+	}
 }

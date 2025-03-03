@@ -35,9 +35,6 @@ func NewRouter(cfg config.HTTPConfig, log logger) *HTTPServer {
 	}
 }
 
-func (h HTTPServer) Run() {
-	err := h.Router.Run(h.host)
-	if err != nil {
-		return
-	}
+func (h HTTPServer) Run() error {
+	return h.Router.Run(h.host)
 }
