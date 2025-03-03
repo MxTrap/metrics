@@ -39,7 +39,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 		//if err != nil {
 		//	log.Logger.Error("could not initialize database ", err)
 		//}
-		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN)
+		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN, log)
 	}
 	if storageErr != nil {
 		log.Logger.Error(storageErr)
