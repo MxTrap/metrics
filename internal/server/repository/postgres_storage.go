@@ -133,6 +133,7 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics
 
 func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models.Metrics) error {
 	s.log.Logger.Info("Save all")
+
 	updStmt := `UPDATE metric SET 
                   metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 
                   metric_name = $2, 
@@ -146,14 +147,11 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 	}
 
 	batchUpdate := pgx.Batch{}
-
 	for _, metric := range metrics {
 		batchUpdate.Queue(updStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
 	}
 
 	batchResult := tx.SendBatch(ctx, &batchUpdate)
-
-	defer batchResult.Close()
 
 	insertRows := make([]models.Metrics, 0, len(metrics))
 
@@ -167,6 +165,11 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 		}
 	}
 
+	err = batchResult.Close()
+	if err != nil {
+		return err
+	}
+
 	if len(insertRows) > 0 {
 		insertStmt := `INSERT INTO metric (metric_type_id, metric_name, value, delta)
 							VALUES ((SELECT id FROM metric_type WHERE metric_type = $1), $2, $3, $4);`
@@ -178,7 +181,6 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 		}
 
 		batchResult = tx.SendBatch(ctx, &insertBatch)
-		defer batchResult.Close()
 
 		for range insertRows {
 			_, err := batchResult.Exec()
@@ -190,10 +192,15 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 				return err
 			}
 		}
+		err := batchResult.Close()
+		if err != nil {
+			return err
+		}
 
 	}
 
 	err = tx.Commit(ctx)
+
 	if err != nil {
 		return err
 	}
