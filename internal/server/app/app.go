@@ -61,6 +61,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 }
 
 func (a App) Run() {
+	a.logger.Logger.Info("starting server")
 	err := a.storageService.Start(a.ctx)
 	if err != nil {
 		a.logger.Logger.Error(err.Error())

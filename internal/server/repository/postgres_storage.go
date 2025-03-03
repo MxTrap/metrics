@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/MxTrap/metrics/internal/common/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -56,9 +55,7 @@ func (s *PostgresStorage) Ping(ctx context.Context) error {
 	if s.db == nil {
 		return errors.New("database not initialized")
 	}
-	err := s.db.Ping(ctx)
-	fmt.Println(err)
-	return err
+	return s.db.Ping(ctx)
 }
 
 func (s *PostgresStorage) Save(ctx context.Context, metric models.Metrics) error {
