@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/MxTrap/metrics/internal/common/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +25,7 @@ type dbMetric struct {
 func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage, error) {
 	db, err := pgxpool.New(ctx, conString)
 	if err != nil {
+		fmt.Println(err)
 		return &PostgresStorage{}, err
 	}
 
