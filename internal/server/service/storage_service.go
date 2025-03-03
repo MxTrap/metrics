@@ -7,13 +7,13 @@ import (
 )
 
 type storageGetter interface {
-	GetAll(ctx context.Context) (map[string]commonmodels.Metrics, error)
-	Find(ctx context.Context, metric string) (commonmodels.Metrics, error)
+	GetAll(ctx context.Context) (map[string]commonmodels.Metric, error)
+	Find(ctx context.Context, metric string) (commonmodels.Metric, error)
 }
 
 type storageSaver interface {
-	Save(ctx context.Context, metrics commonmodels.Metrics) error
-	SaveAll(ctx context.Context, metrics map[string]commonmodels.Metrics) error
+	Save(ctx context.Context, metrics commonmodels.Metric) error
+	SaveAll(ctx context.Context, metrics map[string]commonmodels.Metric) error
 }
 
 type Storage interface {
@@ -23,8 +23,8 @@ type Storage interface {
 }
 
 type FileStorage interface {
-	Save(metrics map[string]commonmodels.Metrics) error
-	Read() (map[string]commonmodels.Metrics, error)
+	Save(metrics map[string]commonmodels.Metric) error
+	Read() (map[string]commonmodels.Metric, error)
 	Close() error
 }
 
@@ -45,7 +45,21 @@ func NewStorageService(fileStorage FileStorage, storage Storage, saveInterval in
 	}
 }
 
-func (s *StorageService) Save(ctx context.Context, metrics commonmodels.Metrics) error {
+func (s *StorageService) SaveAll(ctx context.Context, metrics map[string]commonmodels.Metric) error {
+	err := s.storage.SaveAll(ctx, metrics)
+	if err != nil {
+		return err
+	}
+	if s.saveInterval == 0 {
+		err := s.saveToFile(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *StorageService) Save(ctx context.Context, metrics commonmodels.Metric) error {
 	err := s.storage.Save(ctx, metrics)
 	if err != nil {
 		return err
@@ -58,7 +72,7 @@ func (s *StorageService) Save(ctx context.Context, metrics commonmodels.Metrics)
 	}
 	return nil
 }
-func (s *StorageService) Find(ctx context.Context, metric string) (commonmodels.Metrics, error) {
+func (s *StorageService) Find(ctx context.Context, metric string) (commonmodels.Metric, error) {
 	return s.storage.Find(ctx, metric)
 }
 func (s *StorageService) GetAll(ctx context.Context) (map[string]any, error) {

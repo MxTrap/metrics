@@ -15,19 +15,19 @@ func TestMemStorage_Save(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args []common_models.Metrics
-		want map[string]common_models.Metrics
+		args []common_models.Metric
+		want map[string]common_models.Metric
 	}{
 		{
 			name: "save counter metric",
-			args: []common_models.Metrics{
+			args: []common_models.Metric{
 				{
 					ID:    "metric",
 					MType: "counter",
 					Delta: p1,
 				},
 			},
-			want: map[string]common_models.Metrics{
+			want: map[string]common_models.Metric{
 				"metric": {
 					ID:    "metric",
 					MType: "counter",
@@ -37,7 +37,7 @@ func TestMemStorage_Save(t *testing.T) {
 		},
 		{
 			name: "save some counter metric",
-			args: []common_models.Metrics{
+			args: []common_models.Metric{
 				{
 					ID:    "metric1",
 					MType: "counter",
@@ -54,7 +54,7 @@ func TestMemStorage_Save(t *testing.T) {
 					Delta: p3,
 				},
 			},
-			want: map[string]common_models.Metrics{
+			want: map[string]common_models.Metric{
 				"metric1": {
 					ID:    "metric1",
 					MType: "counter",
@@ -74,7 +74,7 @@ func TestMemStorage_Save(t *testing.T) {
 		},
 		{
 			name: "save same counter metrics",
-			args: []common_models.Metrics{
+			args: []common_models.Metric{
 				{
 					ID:    "metric1",
 					MType: "counter",
@@ -86,7 +86,7 @@ func TestMemStorage_Save(t *testing.T) {
 					Delta: p2,
 				},
 			},
-			want: map[string]common_models.Metrics{
+			want: map[string]common_models.Metric{
 				"metric1": {
 					ID:    "metric1",
 					MType: "counter",
@@ -98,7 +98,7 @@ func TestMemStorage_Save(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &MemStorage{
-				metrics: map[string]common_models.Metrics{},
+				metrics: map[string]common_models.Metric{},
 			}
 			ctx := context.TODO()
 			for _, arg := range tt.args {
@@ -118,7 +118,7 @@ func TestNewMemStorage(t *testing.T) {
 		{
 			name: "test storage creation",
 			want: &MemStorage{
-				metrics: map[string]common_models.Metrics{},
+				metrics: map[string]common_models.Metric{},
 			},
 		},
 	}

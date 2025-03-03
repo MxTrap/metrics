@@ -13,18 +13,23 @@ var gVal1 = utils.MakePointer[float64](1.1)
 var cVal1 = utils.MakePointer[int64](1)
 
 type mockStorage struct {
-	metrics map[string]common_models.Metrics
+	metrics map[string]common_models.Metric
 }
 
-func (s *mockStorage) Save(_ context.Context, metric common_models.Metrics) error {
+func (s *mockStorage) Save(_ context.Context, metric common_models.Metric) error {
 	s.metrics[metric.ID] = metric
 	return nil
 }
 
-func (s *mockStorage) Find(_ context.Context, metric string) (common_models.Metrics, error) {
+func (s *mockStorage) SaveAll(_ context.Context, metrics map[string]common_models.Metric) error {
+	s.metrics = metrics
+	return nil
+}
+
+func (s *mockStorage) Find(_ context.Context, metric string) (common_models.Metric, error) {
 	value, ok := s.metrics[metric]
 	if !ok {
-		return common_models.Metrics{}, errors.New("not found")
+		return common_models.Metric{}, errors.New("not found")
 	}
 	return value, nil
 }
@@ -49,7 +54,7 @@ func (s mockStorage) Ping(_ context.Context) error {
 }
 
 func newMockStorage() MetricStorageService {
-	return &mockStorage{map[string]common_models.Metrics{
+	return &mockStorage{map[string]common_models.Metric{
 		"gauge1": {
 			ID:    "gauge1",
 			MType: "gauge",
@@ -74,17 +79,17 @@ func newMockService() *MetricsService {
 func TestMetricsService_Find(t *testing.T) {
 	tests := []struct {
 		name    string
-		metric  common_models.Metrics
+		metric  common_models.Metric
 		want    any
 		wantErr bool
 	}{
 		{
 			"test find gauge value 1",
-			common_models.Metrics{
+			common_models.Metric{
 				ID:    "gauge1",
 				MType: "gauge",
 			},
-			common_models.Metrics{
+			common_models.Metric{
 				ID:    "gauge1",
 				MType: "gauge",
 				Value: gVal1,
@@ -93,20 +98,20 @@ func TestMetricsService_Find(t *testing.T) {
 		},
 		{
 			"test find unknown metric type",
-			common_models.Metrics{
+			common_models.Metric{
 				ID:    "gauge1",
 				MType: "unknown",
 			},
-			common_models.Metrics{},
+			common_models.Metric{},
 			true,
 		},
 		{
 			"test find unknown metric",
-			common_models.Metrics{
+			common_models.Metric{
 				ID:    "gau",
 				MType: "gauge",
 			},
-			common_models.Metrics{},
+			common_models.Metric{},
 			true,
 		},
 	}
@@ -133,7 +138,7 @@ func TestMetricsService_GetAll(t *testing.T) {
 		{
 			name: "test get all data from empty storageService",
 			service: &MetricsService{
-				storageService: &mockStorage{map[string]common_models.Metrics{}},
+				storageService: &mockStorage{map[string]common_models.Metric{}},
 			},
 			want: map[string]any{},
 		},
@@ -161,12 +166,12 @@ func TestMetricsService_GetAll(t *testing.T) {
 func TestMetricsService_Save(t *testing.T) {
 	tests := []struct {
 		name    string
-		metric  common_models.Metrics
+		metric  common_models.Metric
 		wantErr bool
 	}{
 		{
 			name: "test save valid data",
-			metric: common_models.Metrics{
+			metric: common_models.Metric{
 				ID:    "gau",
 				MType: "gauge",
 				Delta: cVal1,
@@ -175,7 +180,7 @@ func TestMetricsService_Save(t *testing.T) {
 		},
 		{
 			name: "test save valid data with invalid metric type",
-			metric: common_models.Metrics{
+			metric: common_models.Metric{
 				ID:    "gau",
 				MType: "unknown",
 				Delta: cVal1,
@@ -184,7 +189,7 @@ func TestMetricsService_Save(t *testing.T) {
 		},
 		{
 			name: "test save without data",
-			metric: common_models.Metrics{
+			metric: common_models.Metric{
 				ID:    "gau",
 				MType: "gauge",
 			},

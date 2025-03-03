@@ -36,6 +36,102 @@ func easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(in *jlexer
 			continue
 		}
 		switch key {
+		case "data":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				in.Delim('{')
+				out.Data = make(map[string]Metric)
+				for !in.IsDelim('}') {
+					key := string(in.String())
+					in.WantColon()
+					var v1 Metric
+					(v1).UnmarshalEasyJSON(in)
+					(out.Data)[key] = v1
+					in.WantComma()
+				}
+				in.Delim('}')
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(out *jwriter.Writer, in Metrics) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"data\":"
+		out.RawString(prefix[1:])
+		if in.Data == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
+			out.RawString(`null`)
+		} else {
+			out.RawByte('{')
+			v2First := true
+			for v2Name, v2Value := range in.Data {
+				if v2First {
+					v2First = false
+				} else {
+					out.RawByte(',')
+				}
+				out.String(string(v2Name))
+				out.RawByte(':')
+				(v2Value).MarshalEasyJSON(out)
+			}
+			out.RawByte('}')
+		}
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v Metrics) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v Metrics) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *Metrics) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *Metrics) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(l, v)
+}
+func easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels1(in *jlexer.Lexer, out *Metric) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
 		case "id":
 			out.ID = string(in.String())
 		case "type":
@@ -70,7 +166,7 @@ func easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(in *jlexer
 		in.Consumed()
 	}
 }
-func easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(out *jwriter.Writer, in Metrics) {
+func easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels1(out *jwriter.Writer, in Metric) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -98,25 +194,25 @@ func easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(out *jwrit
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v Metrics) MarshalJSON() ([]byte, error) {
+func (v Metric) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(&w, v)
+	easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels1(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v Metrics) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(w, v)
+func (v Metric) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels1(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *Metrics) UnmarshalJSON(data []byte) error {
+func (v *Metric) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(&r, v)
+	easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels1(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *Metrics) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(l, v)
+func (v *Metric) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels1(l, v)
 }

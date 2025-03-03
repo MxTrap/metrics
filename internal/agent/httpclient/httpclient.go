@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/service"
-	common_moodels "github.com/MxTrap/metrics/internal/common/models"
+	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/mailru/easyjson"
 	"net/http"
 	"time"
@@ -73,8 +73,11 @@ func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
-	body, err := easyjson.Marshal(metric)
+func (h *HTTPClient) postMetric(metric map[string]common_models.Metric) error {
+	m := common_models.Metrics{
+		Data: metric,
+	}
+	body, err := easyjson.Marshal(m)
 
 	if err != nil {
 		return err
@@ -84,7 +87,7 @@ func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/", h.serverURL), compressed)
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/updates/", h.serverURL), compressed)
 	if err != nil {
 		return err
 	}
@@ -105,22 +108,24 @@ func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
 func (h *HTTPClient) sendMetrics() {
 	metrics := h.service.GetMetrics()
 
+	m := make(map[string]common_models.Metric)
+
 	for key, val := range metrics.Gauge {
-		err := h.postMetric(common_moodels.Metrics{
+		m[key] = common_models.Metric{
 			ID:    key,
-			MType: common_moodels.Gauge,
+			MType: common_models.Gauge,
 			Value: &val,
-		})
-		if err != nil {
-			return
 		}
+
 	}
 
-	err := h.postMetric(common_moodels.Metrics{
+	m["PollCount"] = common_models.Metric{
 		ID:    "PollCount",
-		MType: common_moodels.Counter,
+		MType: common_models.Counter,
 		Delta: &metrics.Counter.PollCount,
-	})
+	}
+
+	err := h.postMetric(m)
 	if err != nil {
 		return
 	}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/gin-gonic/gin"
@@ -14,8 +15,9 @@ import (
 )
 
 type MetricService interface {
-	Save(ctx context.Context, metrics common_models.Metrics) error
-	Find(ctx context.Context, metric common_models.Metrics) (common_models.Metrics, error)
+	Save(ctx context.Context, metrics common_models.Metric) error
+	SaveAll(ctx context.Context, metrics map[string]common_models.Metric) error
+	Find(ctx context.Context, metric common_models.Metric) (common_models.Metric, error)
 	GetAll(ctx context.Context) (map[string]any, error)
 	Ping(ctx context.Context) error
 }
@@ -37,32 +39,33 @@ func (h MetricsHandler) RegisterRoutes() {
 	h.router.GET("/value"+uri, h.find)
 	h.router.POST("/update/", h.saveJSON)
 	h.router.POST(fmt.Sprintf("/update/%s/:metricValue", uri), h.save)
+	h.router.POST("/updates/", h.saveAll)
 	h.router.POST("/value/", h.findJSON)
 	h.router.GET("/", h.getAll)
 	h.router.GET("/ping", h.ping)
 }
 
-func (MetricsHandler) parseMetric(rawData []byte) (common_models.Metrics, error) {
-	m := common_models.Metrics{}
+func (MetricsHandler) parseMetric(rawData []byte) (common_models.Metric, error) {
+	m := common_models.Metric{}
 	err := easyjson.Unmarshal(rawData, &m)
 	if err != nil {
-		return common_models.Metrics{}, err
+		return common_models.Metric{}, err
 	}
 	return m, nil
 }
 
-func (MetricsHandler) parseURL(url string, searchWord string) (common_models.Metrics, error) {
+func (MetricsHandler) parseURL(url string, searchWord string) (common_models.Metric, error) {
 	idx := strings.Index(url, searchWord+"/")
 	if idx == -1 {
-		return common_models.Metrics{}, models.ErrNotFoundMetric
+		return common_models.Metric{}, models.ErrNotFoundMetric
 	}
 	splitedURL := strings.Split(url[idx+len(searchWord)+1:], "/")
 
 	if len(splitedURL) < 2 {
-		return common_models.Metrics{}, models.ErrNotFoundMetric
+		return common_models.Metric{}, models.ErrNotFoundMetric
 	}
 
-	metric := common_models.Metrics{
+	metric := common_models.Metric{
 		ID:    splitedURL[1],
 		MType: splitedURL[0],
 	}
@@ -76,7 +79,7 @@ func (MetricsHandler) parseURL(url string, searchWord string) (common_models.Met
 	if metric.MType == common_models.Gauge {
 		parseFloat, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			return common_models.Metrics{}, models.ErrWrongMetricValue
+			return common_models.Metric{}, models.ErrWrongMetricValue
 		}
 		metric.Value = &parseFloat
 	}
@@ -84,7 +87,7 @@ func (MetricsHandler) parseURL(url string, searchWord string) (common_models.Met
 	if metric.MType == common_models.Counter {
 		parseInt, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
-			return common_models.Metrics{}, models.ErrWrongMetricValue
+			return common_models.Metric{}, models.ErrWrongMetricValue
 		}
 		metric.Delta = &parseInt
 	}
@@ -92,7 +95,7 @@ func (MetricsHandler) parseURL(url string, searchWord string) (common_models.Met
 	return metric, nil
 }
 
-func (MetricsHandler) getMetricValue(metric common_models.Metrics) any {
+func (MetricsHandler) getMetricValue(metric common_models.Metric) any {
 	if metric.MType == common_models.Gauge {
 		return *metric.Value
 	}
@@ -100,6 +103,28 @@ func (MetricsHandler) getMetricValue(metric common_models.Metrics) any {
 		return *metric.Delta
 	}
 	return nil
+}
+
+func (h MetricsHandler) saveAll(g *gin.Context) {
+	rawData, err := g.GetRawData()
+	if err != nil {
+		g.Status(http.StatusBadRequest)
+		return
+	}
+	m := common_models.Metrics{}
+	err = json.Unmarshal(rawData, &m)
+
+	if err != nil {
+		g.Status(http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.SaveAll(g, m.Data)
+	if err != nil {
+		g.Status(http.StatusInternalServerError)
+		return
+	}
+	g.Status(http.StatusOK)
 }
 
 func (h MetricsHandler) saveJSON(g *gin.Context) {

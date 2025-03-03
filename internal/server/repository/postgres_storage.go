@@ -36,7 +36,7 @@ func NewPostgresStorage(ctx context.Context, conString string, log *logger.Logge
 	}, nil
 }
 
-func (PostgresStorage) mapCommonToDBMetric(metric models.Metrics) dbMetric {
+func (PostgresStorage) mapCommonToDBMetric(metric models.Metric) dbMetric {
 	return dbMetric{
 		MType: metric.MType,
 		Name:  metric.ID,
@@ -45,8 +45,8 @@ func (PostgresStorage) mapCommonToDBMetric(metric models.Metrics) dbMetric {
 	}
 }
 
-func (PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metrics {
-	return models.Metrics{
+func (PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
+	return models.Metric{
 		ID:    metric.Name,
 		MType: metric.MType,
 		Value: metric.Value,
@@ -62,7 +62,7 @@ func (s *PostgresStorage) Ping(ctx context.Context) error {
 	return s.db.Ping(ctx)
 }
 
-func (s *PostgresStorage) Save(ctx context.Context, metric models.Metrics) error {
+func (s *PostgresStorage) Save(ctx context.Context, metric models.Metric) error {
 	s.log.Logger.Info("Save")
 
 	updStmt := `UPDATE metric SET 
@@ -88,27 +88,27 @@ func (s *PostgresStorage) Save(ctx context.Context, metric models.Metrics) error
 	return nil
 }
 
-func (s *PostgresStorage) Find(ctx context.Context, metric string) (models.Metrics, error) {
+func (s *PostgresStorage) Find(ctx context.Context, metric string) (models.Metric, error) {
 	s.log.Logger.Info("Find")
 
 	rows, err := s.db.Query(ctx, `SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
     	JOIN metric_type AS t ON m.metric_type_id = t.id WHERE m.metric_name = $1;`, metric)
 
 	if err != nil {
-		return models.Metrics{}, err
+		return models.Metric{}, err
 	}
 
 	defer rows.Close()
 
 	m, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[dbMetric])
 	if err != nil {
-		return models.Metrics{}, err
+		return models.Metric{}, err
 	}
 
 	return s.mapDBToCommonMetric(m), nil
 }
 
-func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics, error) {
+func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metric, error) {
 	s.log.Logger.Info("Get all")
 
 	rows, err := s.db.Query(
@@ -124,14 +124,14 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics
 	if err != nil {
 		return nil, err
 	}
-	cMetrics := make(map[string]models.Metrics, len(metrics))
+	cMetrics := make(map[string]models.Metric, len(metrics))
 	for _, m := range metrics {
 		cMetrics[m.Name] = s.mapDBToCommonMetric(m)
 	}
 	return cMetrics, nil
 }
 
-func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models.Metrics) error {
+func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models.Metric) error {
 	s.log.Logger.Info("Save all")
 
 	updStmt := `UPDATE metric SET 
@@ -153,7 +153,7 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 
 	batchResult := tx.SendBatch(ctx, &batchUpdate)
 
-	insertRows := make([]models.Metrics, 0, len(metrics))
+	insertRows := make([]models.Metric, 0, len(metrics))
 
 	for _, metric := range metrics {
 		row, err := batchResult.Exec()

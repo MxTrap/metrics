@@ -7,8 +7,9 @@ import (
 )
 
 type MetricStorageService interface {
-	Save(ctx context.Context, metrics common_models.Metrics) error
-	Find(ctx context.Context, metric string) (common_models.Metrics, error)
+	Save(ctx context.Context, metrics common_models.Metric) error
+	SaveAll(ctx context.Context, metrics map[string]common_models.Metric) (err error)
+	Find(ctx context.Context, metric string) (common_models.Metric, error)
 	GetAll(ctx context.Context) (map[string]any, error)
 	Ping(ctx context.Context) error
 }
@@ -29,7 +30,7 @@ func (MetricsService) validateMetric(metricType string) bool {
 	return ok
 }
 
-func (s *MetricsService) Save(ctx context.Context, metric common_models.Metrics) error {
+func (s *MetricsService) Save(ctx context.Context, metric common_models.Metric) error {
 	if !s.validateMetric(metric.MType) {
 		return models.ErrUnknownMetricType
 	}
@@ -46,13 +47,22 @@ func (s *MetricsService) Save(ctx context.Context, metric common_models.Metrics)
 	return nil
 }
 
-func (s *MetricsService) Find(ctx context.Context, metric common_models.Metrics) (common_models.Metrics, error) {
+func (s *MetricsService) SaveAll(ctx context.Context, metrics map[string]common_models.Metric) error {
+	err := s.storageService.SaveAll(ctx, metrics)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *MetricsService) Find(ctx context.Context, metric common_models.Metric) (common_models.Metric, error) {
 	if !s.validateMetric(metric.MType) {
-		return common_models.Metrics{}, models.ErrUnknownMetricType
+		return common_models.Metric{}, models.ErrUnknownMetricType
 	}
 	val, err := s.storageService.Find(ctx, metric.ID)
 	if err != nil {
-		return common_models.Metrics{}, models.ErrNotFoundMetric
+		return common_models.Metric{}, models.ErrNotFoundMetric
 	}
 
 	return val, nil
