@@ -15,7 +15,6 @@ type Migrator struct {
 }
 
 func NewMigrator(connString string) (*Migrator, error) {
-	fmt.Println("conn string ", connString)
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
 		return nil, err

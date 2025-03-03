@@ -19,7 +19,7 @@ type App struct {
 	logger         *logger.Logger
 }
 
-func NewApp(cfg *config.ServerConfig) *App {
+func NewApp(cfg *config.ServerConfig) (*App, error) {
 	ctx := context.Background()
 	log := logger.NewLogger()
 
@@ -32,7 +32,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 		m, err := migrator.NewMigrator(cfg.DatabaseDSN)
 		if err != nil {
 			log.Logger.Error("could not create migrator ", err)
-			return nil
+			return nil, err
 		}
 		err = m.InitializeDB()
 
@@ -57,7 +57,7 @@ func NewApp(cfg *config.ServerConfig) *App {
 		ctx:            ctx,
 		migrator:       m,
 		logger:         log,
-	}
+	}, nil
 }
 
 func (a App) Run() {
