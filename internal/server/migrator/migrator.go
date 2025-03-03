@@ -1,15 +1,13 @@
 package migrator
 
 import (
-	_ "database/sql"
-	_ "github.com/lib/pq"
-
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-
+	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 type Migrator struct {
@@ -17,10 +15,11 @@ type Migrator struct {
 }
 
 func NewMigrator(connString string) (*Migrator, error) {
-	m, err := migrate.New(
+	db, err := sql.Open("postgres", connString)
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	m, err := migrate.NewWithDatabaseInstance(
 		fmt.Sprintf("file://%s", utils.GetProjectPath()+"/migrations"),
-		connString,
-	)
+		"postgres", driver)
 
 	if err != nil {
 		return nil, err
@@ -32,7 +31,7 @@ func NewMigrator(connString string) (*Migrator, error) {
 }
 
 func (m *Migrator) InitializeDB() error {
-	if err := m.migrator.Up(); err != nil {
+	if err := m.migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 	return nil
