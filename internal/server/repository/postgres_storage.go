@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/server/logger"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -11,6 +12,7 @@ import (
 type PostgresStorage struct {
 	db      *pgxpool.Pool
 	connStr string
+	log     *logger.Logger
 }
 
 type dbMetric struct {
@@ -21,7 +23,7 @@ type dbMetric struct {
 	Delta *int64   `db:"delta"`
 }
 
-func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage, error) {
+func NewPostgresStorage(ctx context.Context, conString string, log *logger.Logger) (*PostgresStorage, error) {
 	db, err := pgxpool.New(ctx, conString)
 	if err != nil {
 		return &PostgresStorage{}, err
@@ -30,6 +32,7 @@ func NewPostgresStorage(ctx context.Context, conString string) (*PostgresStorage
 	return &PostgresStorage{
 		db:      db,
 		connStr: conString,
+		log:     log,
 	}, nil
 }
 
@@ -55,10 +58,13 @@ func (s *PostgresStorage) Ping(ctx context.Context) error {
 	if s.db == nil {
 		return errors.New("database not initialized")
 	}
+	s.log.Logger.Info("Ping")
 	return s.db.Ping(ctx)
 }
 
 func (s *PostgresStorage) Save(ctx context.Context, metric models.Metrics) error {
+	s.log.Logger.Info("Save")
+
 	updStmt := `UPDATE metric SET 
                   metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 
                   metric_name = $2, 
@@ -83,6 +89,8 @@ func (s *PostgresStorage) Save(ctx context.Context, metric models.Metrics) error
 }
 
 func (s *PostgresStorage) Find(ctx context.Context, metric string) (models.Metrics, error) {
+	s.log.Logger.Info("Find")
+
 	rows, err := s.db.Query(ctx, `SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
     	JOIN metric_type AS t ON m.metric_type_id = t.id WHERE m.metric_name = $1;`, metric)
 
@@ -101,6 +109,8 @@ func (s *PostgresStorage) Find(ctx context.Context, metric string) (models.Metri
 }
 
 func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics, error) {
+	s.log.Logger.Info("Get all")
+
 	rows, err := s.db.Query(
 		ctx,
 		`SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
@@ -122,7 +132,7 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metrics
 }
 
 func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models.Metrics) error {
-
+	s.log.Logger.Info("Save all")
 	updStmt := `UPDATE metric SET 
                   metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 
                   metric_name = $2, 
