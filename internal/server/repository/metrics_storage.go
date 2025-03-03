@@ -16,8 +16,8 @@ func NewMemStorage() (*MemStorage, error) {
 	}, nil
 }
 
-func (s *MemStorage) Ping(ctx context.Context) error {
-	return nil
+func (s *MemStorage) Ping(_ context.Context) error {
+	return errors.New("not implemented")
 }
 
 func (s *MemStorage) Save(_ context.Context, metric models.Metrics) error {
