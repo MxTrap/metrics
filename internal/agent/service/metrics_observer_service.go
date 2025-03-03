@@ -9,7 +9,7 @@ import (
 )
 
 type MetricsStorage interface {
-	SaveMetrics(metrics models.GaugeMetrics)
+	SaveMetrics(map[string]float64)
 	GetMetrics() models.Metrics
 }
 

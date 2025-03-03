@@ -110,14 +110,13 @@ func (h *HTTPClient) sendMetrics() {
 
 	m := make(map[string]common_models.Metric)
 
-	for key, val := range metrics.Gauge {
+	metrics.Gauge.Range(func(key string, value float64) {
 		m[key] = common_models.Metric{
 			ID:    key,
 			MType: common_models.Gauge,
-			Value: &val,
+			Value: &value,
 		}
-
-	}
+	})
 
 	m["PollCount"] = common_models.Metric{
 		ID:    "PollCount",
