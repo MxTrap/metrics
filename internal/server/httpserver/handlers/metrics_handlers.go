@@ -119,7 +119,12 @@ func (h MetricsHandler) saveAll(g *gin.Context) {
 		return
 	}
 
-	err = h.service.SaveAll(g, m.Data)
+	metrics := make(map[string]common_models.Metric)
+	for _, v := range m {
+		metrics[v.ID] = v
+	}
+
+	err = h.service.SaveAll(g, metrics)
 	if err != nil {
 		g.Status(http.StatusInternalServerError)
 		return

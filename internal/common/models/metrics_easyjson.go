@@ -20,74 +20,44 @@ var (
 func easyjson2220f231DecodeGithubComMxTrapMetricsInternalCommonModels(in *jlexer.Lexer, out *Metrics) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
 		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "data":
-			if in.IsNull() {
-				in.Skip()
+		*out = nil
+	} else {
+		in.Delim('[')
+		if *out == nil {
+			if !in.IsDelim(']') {
+				*out = make(Metrics, 0, 1)
 			} else {
-				in.Delim('{')
-				out.Data = make(map[string]Metric)
-				for !in.IsDelim('}') {
-					key := string(in.String())
-					in.WantColon()
-					var v1 Metric
-					(v1).UnmarshalEasyJSON(in)
-					(out.Data)[key] = v1
-					in.WantComma()
-				}
-				in.Delim('}')
+				*out = Metrics{}
 			}
-		default:
-			in.SkipRecursive()
+		} else {
+			*out = (*out)[:0]
 		}
-		in.WantComma()
+		for !in.IsDelim(']') {
+			var v1 Metric
+			(v1).UnmarshalEasyJSON(in)
+			*out = append(*out, v1)
+			in.WantComma()
+		}
+		in.Delim(']')
 	}
-	in.Delim('}')
 	if isTopLevel {
 		in.Consumed()
 	}
 }
 func easyjson2220f231EncodeGithubComMxTrapMetricsInternalCommonModels(out *jwriter.Writer, in Metrics) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"data\":"
-		out.RawString(prefix[1:])
-		if in.Data == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
-			out.RawString(`null`)
-		} else {
-			out.RawByte('{')
-			v2First := true
-			for v2Name, v2Value := range in.Data {
-				if v2First {
-					v2First = false
-				} else {
-					out.RawByte(',')
-				}
-				out.String(string(v2Name))
-				out.RawByte(':')
-				(v2Value).MarshalEasyJSON(out)
+	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v2, v3 := range in {
+			if v2 > 0 {
+				out.RawByte(',')
 			}
-			out.RawByte('}')
+			(v3).MarshalEasyJSON(out)
 		}
+		out.RawByte(']')
 	}
-	out.RawByte('}')
 }
 
 // MarshalJSON supports json.Marshaler interface

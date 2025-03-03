@@ -8,6 +8,5 @@ type Metric struct {
 	Value *float64 `json:"value,omitempty"`
 }
 
-type Metrics struct {
-	Data map[string]Metric `json:"data"`
-}
+//easyjson:json
+type Metrics []Metric

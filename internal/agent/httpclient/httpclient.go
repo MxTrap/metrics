@@ -73,11 +73,8 @@ func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (h *HTTPClient) postMetric(metric map[string]common_models.Metric) error {
-	m := common_models.Metrics{
-		Data: metric,
-	}
-	body, err := easyjson.Marshal(m)
+func (h *HTTPClient) postMetric(metric common_models.Metrics) error {
+	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
 		return err
@@ -108,21 +105,21 @@ func (h *HTTPClient) postMetric(metric map[string]common_models.Metric) error {
 func (h *HTTPClient) sendMetrics() {
 	metrics := h.service.GetMetrics()
 
-	m := make(map[string]common_models.Metric)
+	m := make([]common_models.Metric, 20)
 
 	metrics.Gauge.Range(func(key string, value float64) {
-		m[key] = common_models.Metric{
+		m = append(m, common_models.Metric{
 			ID:    key,
 			MType: common_models.Gauge,
 			Value: &value,
-		}
+		})
 	})
 
-	m["PollCount"] = common_models.Metric{
+	m = append(m, common_models.Metric{
 		ID:    "PollCount",
 		MType: common_models.Counter,
 		Delta: &metrics.Counter.PollCount,
-	}
+	})
 
 	err := h.postMetric(m)
 	if err != nil {
