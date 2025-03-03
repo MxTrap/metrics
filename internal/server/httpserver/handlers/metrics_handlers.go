@@ -39,7 +39,7 @@ func (h MetricsHandler) RegisterRoutes() {
 	h.router.POST(fmt.Sprintf("/update/%s/:metricValue", uri), h.save)
 	h.router.POST("/value/", h.findJSON)
 	h.router.GET("/", h.getAll)
-	h.router.GET("/ping")
+	h.router.GET("/ping", h.ping)
 }
 
 func (MetricsHandler) parseMetric(rawData []byte) (common_models.Metrics, error) {
@@ -180,4 +180,11 @@ func (h MetricsHandler) getAll(g *gin.Context) {
 	g.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"metrics": all,
 	})
+}
+
+func (h MetricsHandler) ping(g *gin.Context) {
+	err := h.service.Ping(g)
+	if err != nil {
+		_ = g.Error(err)
+	}
 }
