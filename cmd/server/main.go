@@ -4,6 +4,9 @@ import (
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/app"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -18,5 +21,9 @@ func main() {
 
 	application.Run()
 
-	defer application.Shutdown()
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	application.Shutdown()
 }
