@@ -96,14 +96,15 @@ func (h *HTTPClient) postMetric(metric common_models.Metrics) error {
 		for i := 0; i < 4; i++ {
 			response, err = h.client.Do(req)
 			if err == nil {
+				err := response.Body.Close()
+				if err != nil {
+					return
+				}
 				break
 			}
 			if i < 3 {
 				time.Sleep(time.Duration(1+2*i) * time.Second)
 			}
-		}
-		if response != nil && response.Body != nil {
-			_ = response.Body.Close()
 		}
 	}()
 

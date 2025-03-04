@@ -62,12 +62,12 @@ func (PostgresStorage) retrier(cb func() error) error {
 	for i := 0; i < 4; i++ {
 		err := cb()
 		if err == nil {
-			break
+			return nil
 		}
 
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code != pgerrcode.UniqueViolation {
-			break
+			return err
 		}
 
 		if i < 3 {
@@ -134,8 +134,11 @@ func (s *PostgresStorage) Find(ctx context.Context, metricName string) (models.M
 	var metric models.Metric
 
 	err := s.retrier(func() error {
-		rows, err := s.db.Query(ctx, `SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metricName AS m 
-    	JOIN metric_type AS t ON m.metric_type_id = t.id WHERE m.metric_name = $1;`, metricName)
+		rows, err := s.db.Query(
+			ctx,
+			`SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
+    			JOIN metric_type AS t ON m.metric_type_id = t.id WHERE m.metric_name = $1;`, metricName,
+		)
 
 		if err != nil {
 			return err
@@ -151,6 +154,7 @@ func (s *PostgresStorage) Find(ctx context.Context, metricName string) (models.M
 		metric = s.mapDBToCommonMetric(m)
 		return nil
 	})
+
 	if err != nil {
 		return models.Metric{}, err
 	}
