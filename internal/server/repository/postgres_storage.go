@@ -57,7 +57,7 @@ func (PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
 	}
 }
 
-func (PostgresStorage) retrier(cb func() error) error {
+func (PostgresStorage) withRetry(cb func() error) error {
 
 	for i := 0; i < 4; i++ {
 		err := cb()
@@ -89,7 +89,7 @@ func (s *PostgresStorage) Ping(ctx context.Context) error {
 func (s *PostgresStorage) Save(ctx context.Context, metric models.Metric) error {
 	s.log.Logger.Info("Save")
 
-	return s.retrier(func() error {
+	return s.withRetry(func() error {
 		tx, err := s.db.Begin(ctx)
 
 		if err != nil {
@@ -133,7 +133,7 @@ func (s *PostgresStorage) Find(ctx context.Context, metricName string) (models.M
 
 	var metric models.Metric
 
-	err := s.retrier(func() error {
+	err := s.withRetry(func() error {
 		rows, err := s.db.Query(
 			ctx,
 			`SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
@@ -167,7 +167,7 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metric,
 
 	var metrics map[string]models.Metric
 
-	err := s.retrier(func() error {
+	err := s.withRetry(func() error {
 		rows, err := s.db.Query(
 			ctx,
 			`SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
@@ -198,7 +198,7 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metric,
 func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models.Metric) error {
 	s.log.Logger.Info("Save all")
 
-	return s.retrier(func() error {
+	return s.withRetry(func() error {
 		updStmt := `UPDATE metric SET 
                   metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 
                   metric_name = $2, 
