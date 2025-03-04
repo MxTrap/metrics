@@ -17,4 +17,6 @@ func main() {
 	}
 
 	application.Run()
+
+	defer application.Shutdown()
 }

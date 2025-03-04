@@ -137,7 +137,11 @@ func (s *StorageService) Start(ctx context.Context) error {
 
 func (s *StorageService) Stop() {
 	s.ticker.Stop()
-	err := s.fileStorage.Close()
+	err := s.saveToFile(context.Background())
+	if err != nil {
+		return
+	}
+	err = s.fileStorage.Close()
 	if err != nil {
 		return
 	}

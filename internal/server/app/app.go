@@ -73,3 +73,8 @@ func (a App) Run() {
 		return
 	}
 }
+
+func (a App) Shutdown() {
+	a.logger.Logger.Info("shutting down server")
+	a.storageService.Stop()
+}

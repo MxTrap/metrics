@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/server/models"
 )
@@ -75,9 +74,7 @@ func (s *MetricsService) Find(ctx context.Context, metric common_models.Metric) 
 	if !s.validateMetric(metric.MType) {
 		return common_models.Metric{}, models.ErrUnknownMetricType
 	}
-	fmt.Println("Ssaaa")
 	val, err := s.storageService.Find(ctx, metric.ID)
-	fmt.Println(err)
 	if err != nil {
 		return common_models.Metric{}, models.ErrNotFoundMetric
 	}
