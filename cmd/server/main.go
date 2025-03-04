@@ -19,11 +19,12 @@ func main() {
 		log.Fatal("Application initialization failed")
 	}
 
-	application.Run()
+	go application.Run()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
+	log.Println("Shutting down...")
 	application.Shutdown()
 }
