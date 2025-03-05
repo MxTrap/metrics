@@ -22,7 +22,7 @@ func main() {
 	go application.Run()
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	<-sigChan
 
 	log.Println("Shutting down...")
