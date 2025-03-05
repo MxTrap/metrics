@@ -9,7 +9,6 @@ import (
 	"github.com/MxTrap/metrics/internal/server/migrator"
 	"github.com/MxTrap/metrics/internal/server/repository"
 	"github.com/MxTrap/metrics/internal/server/service"
-	"os"
 )
 
 type App struct {
@@ -39,12 +38,13 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 
 		if err != nil {
 			log.Logger.Error("could not initialize database ", err)
+			return nil, err
 		}
 		storage, storageErr = repository.NewPostgresStorage(ctx, cfg.DatabaseDSN, log)
 	}
 	if storageErr != nil {
 		log.Logger.Error(storageErr)
-		os.Exit(1)
+		return nil, storageErr
 	}
 
 	sService := service.NewStorageService(fileStorage, storage, cfg.StoreInterval, cfg.Restore)
@@ -62,21 +62,27 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 	}, nil
 }
 
-func (a App) Run() {
+func (a App) Run() error {
 	a.logger.Logger.Info("starting server")
 	err := a.storageService.Start(a.ctx)
 	if err != nil {
 		a.logger.Logger.Error(err.Error())
-		os.Exit(1)
+		return err
 	}
 	err = a.httpServer.Run()
 	if err != nil {
 		a.logger.Logger.Error(err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func (a App) Shutdown() {
 	a.logger.Logger.Info("shutting down server")
 	a.storageService.Stop()
+	err := a.httpServer.Stop(a.ctx)
+	if err != nil {
+		a.logger.Logger.Error(err.Error())
+		return
+	}
 }
