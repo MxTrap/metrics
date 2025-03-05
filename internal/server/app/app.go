@@ -9,6 +9,7 @@ import (
 	"github.com/MxTrap/metrics/internal/server/migrator"
 	"github.com/MxTrap/metrics/internal/server/repository"
 	"github.com/MxTrap/metrics/internal/server/service"
+	"os"
 )
 
 type App struct {
@@ -43,6 +44,7 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 	}
 	if storageErr != nil {
 		log.Logger.Error(storageErr)
+		os.Exit(1)
 	}
 
 	sService := service.NewStorageService(fileStorage, storage, cfg.StoreInterval, cfg.Restore)
@@ -65,12 +67,12 @@ func (a App) Run() {
 	err := a.storageService.Start(a.ctx)
 	if err != nil {
 		a.logger.Logger.Error(err.Error())
-		return
+		os.Exit(1)
 	}
 	err = a.httpServer.Run()
 	if err != nil {
 		a.logger.Logger.Error(err)
-		return
+		os.Exit(1)
 	}
 }
 

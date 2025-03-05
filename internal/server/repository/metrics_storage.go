@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/MxTrap/metrics/internal/common/models"
 	"maps"
 )
@@ -31,7 +30,6 @@ func (s *MemStorage) Save(_ context.Context, metric models.Metric) error {
 }
 
 func (s *MemStorage) Find(_ context.Context, metric string) (models.Metric, error) {
-	fmt.Println("find ", s.metrics)
 	value, ok := s.metrics[metric]
 	if !ok {
 		return models.Metric{}, errors.New("not found")
@@ -45,6 +43,5 @@ func (s *MemStorage) GetAll(_ context.Context) (map[string]models.Metric, error)
 
 func (s *MemStorage) SaveAll(_ context.Context, metrics map[string]models.Metric) error {
 	maps.Copy(s.metrics, metrics)
-	fmt.Println("save all", s.metrics)
 	return nil
 }
