@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/common/models"
+	"maps"
 )
 
 type MemStorage struct {
@@ -43,7 +44,7 @@ func (s *MemStorage) GetAll(_ context.Context) (map[string]models.Metric, error)
 }
 
 func (s *MemStorage) SaveAll(_ context.Context, metrics map[string]models.Metric) error {
-	s.metrics = metrics
+	maps.Copy(s.metrics, metrics)
 	fmt.Println("save all", s.metrics)
 	return nil
 }
