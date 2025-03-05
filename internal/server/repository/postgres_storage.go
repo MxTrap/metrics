@@ -66,7 +66,7 @@ func (PostgresStorage) withRetry(cb func() error) error {
 		}
 
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code != pgerrcode.UniqueViolation {
+		if !errors.As(err, &pgErr) || pgErr.Code != pgerrcode.UniqueViolation {
 			return err
 		}
 
