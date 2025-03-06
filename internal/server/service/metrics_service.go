@@ -2,26 +2,47 @@ package service
 
 import (
 	"context"
-	common_models "github.com/MxTrap/metrics/internal/common/models"
+	commonmodels "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/server/models"
+	"time"
 )
 
-type MetricStorageService interface {
-	Save(ctx context.Context, metrics common_models.Metric) error
-	SaveAll(ctx context.Context, metrics map[string]common_models.Metric) (err error)
-	Find(ctx context.Context, metric string) (common_models.Metric, error)
-	GetAll(ctx context.Context) (map[string]any, error)
+type storageGetter interface {
+	GetAll(ctx context.Context) (map[string]commonmodels.Metric, error)
+	Find(ctx context.Context, metric string) (commonmodels.Metric, error)
+}
+
+type storageSaver interface {
+	Save(ctx context.Context, metrics commonmodels.Metric) error
+	SaveAll(ctx context.Context, metrics map[string]commonmodels.Metric) error
+}
+
+type Storage interface {
+	storageGetter
+	storageSaver
 	Ping(ctx context.Context) error
 }
 
-type MetricsService struct {
-	storageService MetricStorageService
+type FileStorage interface {
+	Save(metrics map[string]commonmodels.Metric) error
+	Read() (map[string]commonmodels.Metric, error)
+	Close() error
 }
 
-func NewMetricsService(sService MetricStorageService) *MetricsService {
+type MetricsService struct {
+	fileStorage  FileStorage
+	storage      Storage
+	saveInterval int
+	restore      bool
+	ticker       *time.Ticker
+}
 
+func NewMetricsService(fileStorage FileStorage, storage Storage, saveInterval int, restore bool) *MetricsService {
 	return &MetricsService{
-		storageService: sService,
+		fileStorage:  fileStorage,
+		storage:      storage,
+		saveInterval: saveInterval,
+		restore:      restore,
 	}
 }
 
@@ -30,28 +51,11 @@ func (MetricsService) validateMetric(metricType string) bool {
 	return ok
 }
 
-func (s *MetricsService) Save(ctx context.Context, metric common_models.Metric) error {
-	if !s.validateMetric(metric.MType) {
-		return models.ErrUnknownMetricType
-	}
-
-	if metric.Delta == nil && metric.Value == nil {
-		return models.ErrWrongMetricValue
-	}
-
-	err := s.storageService.Save(ctx, metric)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *MetricsService) SaveAll(ctx context.Context, metrics []common_models.Metric) error {
-	m := make(map[string]common_models.Metric)
+func (s *MetricsService) SaveAll(ctx context.Context, metrics []commonmodels.Metric) error {
+	m := make(map[string]commonmodels.Metric)
 	for _, metric := range metrics {
 		if s.validateMetric(metric.MType) {
-			if metric.MType == common_models.Counter {
+			if metric.MType == commonmodels.Counter {
 				val, ok := m[metric.ID]
 				if ok {
 					*val.Delta = *metric.Delta + *val.Delta
@@ -62,34 +66,115 @@ func (s *MetricsService) SaveAll(ctx context.Context, metrics []common_models.Me
 			m[metric.ID] = metric
 		}
 	}
-	err := s.storageService.SaveAll(ctx, m)
+
+	err := s.storage.SaveAll(ctx, m)
 	if err != nil {
 		return err
 	}
-
+	if s.saveInterval == 0 {
+		err := s.saveToFile(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (s *MetricsService) Find(ctx context.Context, metric common_models.Metric) (common_models.Metric, error) {
+func (s *MetricsService) Save(ctx context.Context, metric commonmodels.Metric) error {
 	if !s.validateMetric(metric.MType) {
-		return common_models.Metric{}, models.ErrUnknownMetricType
+		return models.ErrUnknownMetricType
 	}
-	val, err := s.storageService.Find(ctx, metric.ID)
+
+	if metric.Delta == nil && metric.Value == nil {
+		return models.ErrWrongMetricValue
+	}
+
+	err := s.storage.Save(ctx, metric)
 	if err != nil {
-		return common_models.Metric{}, models.ErrNotFoundMetric
+		return err
 	}
-
-	return val, nil
+	if s.saveInterval == 0 {
+		err := s.saveToFile(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
-
+func (s *MetricsService) Find(ctx context.Context, metric commonmodels.Metric) (commonmodels.Metric, error) {
+	if !s.validateMetric(metric.MType) {
+		return commonmodels.Metric{}, models.ErrUnknownMetricType
+	}
+	return s.storage.Find(ctx, metric.ID)
+}
 func (s *MetricsService) GetAll(ctx context.Context) (map[string]any, error) {
-	return s.storageService.GetAll(ctx)
+	dst := map[string]any{}
+	metrics, err := s.storage.GetAll(ctx)
+	if err != nil {
+		return dst, err
+	}
+	for k, v := range metrics {
+		var val any
+		if v.Delta != nil {
+			val = *v.Delta
+		}
+		if v.Value != nil {
+			val = *v.Value
+		}
+		dst[k] = val
+	}
+	return dst, nil
 }
 
-func (s *MetricsService) Ping(ctx context.Context) error {
-	err := s.storageService.Ping(ctx)
+func (s *MetricsService) saveToFile(ctx context.Context) error {
+	all, err := s.storage.GetAll(ctx)
+	if err != nil {
+		return err
+	}
+	err = s.fileStorage.Save(all)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+func (s *MetricsService) Ping(ctx context.Context) error {
+	return s.storage.Ping(ctx)
+}
+
+func (s *MetricsService) Start(ctx context.Context) error {
+	if s.restore {
+		read, err := s.fileStorage.Read()
+		if err != nil {
+			return err
+		}
+		err = s.storage.SaveAll(ctx, read)
+		if err != nil {
+			return err
+		}
+	}
+
+	if s.saveInterval > 0 {
+		s.ticker = time.NewTicker(time.Duration(s.saveInterval) * time.Second)
+		go func() {
+			for range s.ticker.C {
+				err := s.saveToFile(ctx)
+				if err != nil {
+					return
+				}
+			}
+		}()
+	}
+	return nil
+}
+
+func (s *MetricsService) Stop() {
+	s.ticker.Stop()
+	err := s.saveToFile(context.Background())
+	if err != nil {
+		return
+	}
+	err = s.fileStorage.Close()
+	if err != nil {
+		return
+	}
 }

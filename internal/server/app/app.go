@@ -13,9 +13,8 @@ import (
 
 type App struct {
 	httpServer     *httpserver.HTTPServer
-	storageService *service.StorageService
+	storageService *service.MetricsService
 	ctx            context.Context
-	migrator       *migrator.Migrator
 	logger         *logger.Logger
 }
 
@@ -26,7 +25,6 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 	fileStorage := repository.NewMetricsFileStorage(cfg.FileStoragePath)
 	var storage service.Storage
 	var storageErr error
-	var m *migrator.Migrator
 	storage, storageErr = repository.NewMemStorage()
 	if cfg.DatabaseDSN != "" {
 		m, err := migrator.NewMigrator(cfg.DatabaseDSN)
@@ -47,18 +45,15 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 		return nil, storageErr
 	}
 
-	sService := service.NewStorageService(fileStorage, storage, cfg.StoreInterval, cfg.Restore)
-	metricsService := service.NewMetricsService(sService)
+	metricsService := service.NewMetricsService(fileStorage, storage, cfg.StoreInterval, cfg.Restore)
 	httpRouter := httpserver.NewRouter(cfg.HTTP, log)
 	metricHandler := handlers.NewMetricHandler(metricsService, httpRouter.Router)
 	metricHandler.RegisterRoutes()
 
 	return &App{
-		httpServer:     httpRouter,
-		storageService: sService,
-		ctx:            ctx,
-		migrator:       m,
-		logger:         log,
+		httpServer: httpRouter,
+		ctx:        ctx,
+		logger:     log,
 	}, nil
 }
 

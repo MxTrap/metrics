@@ -275,6 +275,5 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 }
 
 func (s *PostgresStorage) Close() {
-
 	s.db.Close()
 }

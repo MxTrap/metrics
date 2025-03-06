@@ -14,11 +14,19 @@ import (
 	"github.com/MxTrap/metrics/internal/server/models"
 )
 
-type MetricService interface {
+type saver interface {
 	Save(ctx context.Context, metrics common_models.Metric) error
 	SaveAll(ctx context.Context, metrics []common_models.Metric) error
+}
+
+type getter interface {
 	Find(ctx context.Context, metric common_models.Metric) (common_models.Metric, error)
 	GetAll(ctx context.Context) (map[string]any, error)
+}
+
+type MetricService interface {
+	saver
+	getter
 	Ping(ctx context.Context) error
 }
 

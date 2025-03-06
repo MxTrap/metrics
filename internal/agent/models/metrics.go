@@ -6,12 +6,12 @@ import (
 
 type GaugeMetrics struct {
 	mx      *sync.RWMutex
-	metrics map[string]float64
+	Metrics map[string]float64
 }
 
 func NewGaugeMetrics() *GaugeMetrics {
 	return &GaugeMetrics{
-		metrics: make(map[string]float64),
+		Metrics: make(map[string]float64),
 		mx:      &sync.RWMutex{},
 	}
 }
@@ -19,26 +19,26 @@ func NewGaugeMetrics() *GaugeMetrics {
 func (c *GaugeMetrics) Load(m map[string]float64) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
-	c.metrics = m
+	c.Metrics = m
 }
 
 func (c *GaugeMetrics) Get(key string) (float64, bool) {
 	c.mx.RLock()
 	defer c.mx.RUnlock()
-	val, ok := c.metrics[key]
+	val, ok := c.Metrics[key]
 	return val, ok
 }
 
 func (c *GaugeMetrics) Set(key string, value float64) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
-	c.metrics[key] = value
+	c.Metrics[key] = value
 }
 
 func (c *GaugeMetrics) Range(callback func(key string, value float64)) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
-	for k, v := range c.metrics {
+	for k, v := range c.Metrics {
 		callback(k, v)
 	}
 }
