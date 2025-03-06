@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS metric
     metric_type_id  INT,
     metric_name     VARCHAR,
     value           DOUBLE PRECISION,
-    delta           INT,
+    delta           BIGINT,
     CONSTRAINT fk_metric_metric_type
         FOREIGN KEY (metric_type_id)
         REFERENCES metric_type (id)
