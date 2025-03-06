@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"errors"
+	"fmt"
 	"github.com/MxTrap/metrics/internal/server/models"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -28,6 +29,7 @@ func StatusErrorMiddleware() gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
+		fmt.Println(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 
 	}
