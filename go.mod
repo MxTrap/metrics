@@ -2,6 +2,8 @@ module github.com/MxTrap/metrics
 
 go 1.22.11
 
+toolchain go1.23.3
+
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/gin-gonic/gin v1.10.0
