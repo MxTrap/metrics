@@ -13,7 +13,7 @@ import (
 
 type App struct {
 	httpServer     *httpserver.HTTPServer
-	storageService *service.MetricsService
+	metricsService *service.MetricsService
 	ctx            context.Context
 	logger         *logger.Logger
 }
@@ -51,15 +51,16 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 	metricHandler.RegisterRoutes()
 
 	return &App{
-		httpServer: httpRouter,
-		ctx:        ctx,
-		logger:     log,
+		httpServer:     httpRouter,
+		ctx:            ctx,
+		logger:         log,
+		metricsService: metricsService,
 	}, nil
 }
 
 func (a App) Run() error {
 	a.logger.Logger.Info("starting server")
-	err := a.storageService.Start(a.ctx)
+	err := a.metricsService.Start(a.ctx)
 	if err != nil {
 		a.logger.Logger.Error(err.Error())
 		return err
@@ -74,7 +75,7 @@ func (a App) Run() error {
 
 func (a App) Shutdown() {
 	a.logger.Logger.Info("shutting down server")
-	a.storageService.Stop()
+	a.metricsService.Stop()
 	err := a.httpServer.Stop(a.ctx)
 	if err != nil {
 		a.logger.Logger.Error(err.Error())
