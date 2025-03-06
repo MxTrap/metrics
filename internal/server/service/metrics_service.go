@@ -105,7 +105,13 @@ func (s *MetricsService) Find(ctx context.Context, metric commonmodels.Metric) (
 	if !s.validateMetric(metric.MType) {
 		return commonmodels.Metric{}, models.ErrUnknownMetricType
 	}
-	return s.storage.Find(ctx, metric.ID)
+
+	val, err := s.storage.Find(ctx, metric.ID)
+	if err != nil {
+		return commonmodels.Metric{}, models.ErrNotFoundMetric
+	}
+
+	return val, nil
 }
 func (s *MetricsService) GetAll(ctx context.Context) (map[string]any, error) {
 	dst := map[string]any{}
