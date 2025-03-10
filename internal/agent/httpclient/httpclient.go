@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/service"
-	common_moodels "github.com/MxTrap/metrics/internal/common/models"
+	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/mailru/easyjson"
 	"net/http"
 	"time"
@@ -73,7 +73,7 @@ func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
+func (h *HTTPClient) postMetric(metric common_models.Metrics) error {
 	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
@@ -84,43 +84,53 @@ func (h *HTTPClient) postMetric(metric common_moodels.Metrics) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/", h.serverURL), compressed)
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/updates/", h.serverURL), compressed)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
-	resp, err := h.client.Do(req)
-	if err != nil {
-		return err
-	}
-	err = resp.Body.Close()
-	if err != nil {
-		return err
-	}
+	go func() {
+		var response *http.Response
+		for i := 0; i < 4; i++ {
+			response, err = h.client.Do(req)
+			if err == nil {
+				err := response.Body.Close()
+				if err != nil {
+					return
+				}
+				break
+			}
+			if i < 3 {
+				time.Sleep(time.Duration(1+2*i) * time.Second)
+			}
+		}
+	}()
+
 	return nil
 }
 
 func (h *HTTPClient) sendMetrics() {
 	metrics := h.service.GetMetrics()
 
-	for key, val := range metrics.Gauge {
-		err := h.postMetric(common_moodels.Metrics{
-			ID:    key,
-			MType: common_moodels.Gauge,
-			Value: &val,
-		})
-		if err != nil {
-			return
-		}
-	}
+	m := make([]common_models.Metric, 20)
 
-	err := h.postMetric(common_moodels.Metrics{
+	metrics.Gauge.Range(func(key string, value float64) {
+		m = append(m, common_models.Metric{
+			ID:    key,
+			MType: common_models.Gauge,
+			Value: &value,
+		})
+	})
+
+	m = append(m, common_models.Metric{
 		ID:    "PollCount",
-		MType: common_moodels.Counter,
+		MType: common_models.Counter,
 		Delta: &metrics.Counter.PollCount,
 	})
+
+	err := h.postMetric(m)
 	if err != nil {
 		return
 	}

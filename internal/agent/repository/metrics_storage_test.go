@@ -7,6 +7,7 @@ import (
 )
 
 func TestMetricsStorage_GetMetrics(t *testing.T) {
+	gaugeMetrics := *models.NewGaugeMetrics()
 	type fields struct {
 		storage models.Metrics
 	}
@@ -21,23 +22,17 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 			want:   models.Metrics{},
 		},
 		{
-			name: "test get empty metrics",
+			name: "test get metrics",
 			fields: fields{
 				storage: models.Metrics{
-					Gauge: map[string]float64{
-						"gauge1": 1,
-						"gauge2": 2.2,
-					},
+					Gauge: gaugeMetrics,
 					Counter: models.CounterMetrics{
 						PollCount: 1,
 					},
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]float64{
-					"gauge1": 1,
-					"gauge2": 2.2,
-				},
+				Gauge: gaugeMetrics,
 				Counter: models.CounterMetrics{
 					PollCount: 1,
 				},
@@ -57,22 +52,24 @@ func TestMetricsStorage_GetMetrics(t *testing.T) {
 func TestMetricsStorage_SaveMetrics(t *testing.T) {
 	tests := []struct {
 		name string
-		args []models.GaugeMetrics
+		args []map[string]float64
 		want models.Metrics
 	}{
 		{
 			name: "test save metrics",
-			args: []models.GaugeMetrics{
+			args: []map[string]float64{
 				{
 					"gauge1": 1,
 					"gauge2": 2.2,
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]float64{
-					"gauge1":      1,
-					"gauge2":      2.2,
-					"RandomValue": 1,
+				Gauge: models.GaugeMetrics{
+					Metrics: map[string]float64{
+						"gauge1":      1,
+						"gauge2":      2.2,
+						"RandomValue": 1,
+					},
 				},
 				Counter: models.CounterMetrics{
 					PollCount: 1,
@@ -82,7 +79,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 
 		{
 			name: "test save 2 metrics",
-			args: []models.GaugeMetrics{
+			args: []map[string]float64{
 				{
 					"gauge1": 1,
 					"gauge2": 2.2,
@@ -93,11 +90,12 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 				},
 			},
 			want: models.Metrics{
-				Gauge: map[string]float64{
-					"gauge1":      1,
-					"gauge2":      2,
-					"gauge3":      3.3,
-					"RandomValue": 1,
+				Gauge: models.GaugeMetrics{
+					Metrics: map[string]float64{
+						"gauge2":      2,
+						"gauge3":      3.3,
+						"RandomValue": 1,
+					},
 				},
 				Counter: models.CounterMetrics{
 					PollCount: 2,
@@ -107,16 +105,13 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &MetricsStorage{
-				storage: models.Metrics{
-					Gauge: models.GaugeMetrics{},
-				},
-			}
+			s := *NewMetricsStorage()
 			for _, val := range tt.args {
 				s.SaveMetrics(val)
-				s.storage.Gauge["RandomValue"] = 1
+				s.storage.Gauge.Metrics["RandomValue"] = 1
 			}
-			assert.Equal(t, tt.want, s.storage)
+			assert.Equal(t, tt.want.Gauge.Metrics, s.storage.Gauge.Metrics)
+			assert.Equal(t, tt.want.Counter, s.storage.Counter)
 		})
 	}
 }
@@ -130,7 +125,7 @@ func TestNewMetricsStorage(t *testing.T) {
 			name: "test storage creation",
 			want: &MetricsStorage{
 				storage: models.Metrics{
-					Gauge:   map[string]float64{},
+					Gauge:   *models.NewGaugeMetrics(),
 					Counter: models.CounterMetrics{},
 				},
 			},

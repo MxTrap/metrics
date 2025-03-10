@@ -2,7 +2,6 @@ package repository
 
 import (
 	"github.com/MxTrap/metrics/internal/agent/models"
-	"maps"
 	"math/rand"
 )
 
@@ -13,15 +12,15 @@ type MetricsStorage struct {
 func NewMetricsStorage() *MetricsStorage {
 	return &MetricsStorage{
 		storage: models.Metrics{
-			Gauge:   models.GaugeMetrics{},
+			Gauge:   *models.NewGaugeMetrics(),
 			Counter: models.CounterMetrics{},
 		},
 	}
 }
 
-func (s *MetricsStorage) SaveMetrics(m models.GaugeMetrics) {
-	maps.Copy(s.storage.Gauge, m)
-	s.storage.Gauge["RandomValue"] = rand.Float64()
+func (s *MetricsStorage) SaveMetrics(m map[string]float64) {
+	s.storage.Gauge.Load(m)
+	s.storage.Gauge.Set("RandomValue", rand.Float64())
 	s.storage.Counter.PollCount += 1
 }
 

@@ -7,23 +7,23 @@ import (
 )
 
 type Logger struct {
-	logger zap.SugaredLogger
+	Logger zap.SugaredLogger
 }
 
 func NewLogger() *Logger {
 	sugar := zap.NewExample().Sugar()
 	return &Logger{
-		logger: *sugar,
+		Logger: *sugar,
 	}
 }
 
-func (l *Logger) Logger() gin.HandlerFunc {
+func (l *Logger) LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
 
 		duration := time.Since(start)
-		l.logger.Infoln(
+		l.Logger.Infoln(
 			"uri", c.Request.RequestURI,
 			"method", c.Request.Method,
 			"duration", duration,

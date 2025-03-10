@@ -1,12 +1,11 @@
 package mappers
 
 import (
-	"github.com/MxTrap/metrics/internal/agent/models"
 	"runtime"
 )
 
-func MapGaugeMetrics(ms runtime.MemStats) models.GaugeMetrics {
-	return models.GaugeMetrics{
+func MapGaugeMetrics(ms runtime.MemStats) map[string]float64 {
+	return map[string]float64{
 		"Alloc":         float64(ms.Alloc),
 		"BuckHashSys":   float64(ms.BuckHashSys),
 		"Frees":         float64(ms.Frees),

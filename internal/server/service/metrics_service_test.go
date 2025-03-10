@@ -1,7 +1,9 @@
 package service
 
 import (
-	common_models "github.com/MxTrap/metrics/internal/common/models"
+	"context"
+	"errors"
+	commonmodels "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/common/utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -11,34 +13,37 @@ var gVal1 = utils.MakePointer[float64](1.1)
 var cVal1 = utils.MakePointer[int64](1)
 
 type mockStorage struct {
-	metrics map[string]common_models.Metrics
+	metrics map[string]commonmodels.Metric
 }
 
-func (s *mockStorage) Save(metric common_models.Metrics) {
+func (s *mockStorage) Save(_ context.Context, metric commonmodels.Metric) error {
 	s.metrics[metric.ID] = metric
+	return nil
 }
 
-func (s *mockStorage) Find(metric string) (common_models.Metrics, bool) {
+func (s *mockStorage) SaveAll(_ context.Context, metrics map[string]commonmodels.Metric) error {
+	s.metrics = metrics
+	return nil
+}
+
+func (s *mockStorage) Find(_ context.Context, metric string) (commonmodels.Metric, error) {
 	value, ok := s.metrics[metric]
-	return value, ok
+	if !ok {
+		return commonmodels.Metric{}, errors.New("not found")
+	}
+	return value, nil
 }
 
-func (s *mockStorage) GetAll() map[string]any {
-	dst := map[string]any{}
-	for k, v := range s.metrics {
-		var val any
-		if v.Delta != nil {
-			val = *v.Delta
-		}
-		if v.Value != nil {
-			val = *v.Value
-		}
-		dst[k] = val
-	}
-	return dst
+func (s *mockStorage) GetAll(_ context.Context) (map[string]commonmodels.Metric, error) {
+	return s.metrics, nil
 }
-func newMockStorage() MetricStorageService {
-	return &mockStorage{map[string]common_models.Metrics{
+
+func (s *mockStorage) Ping(_ context.Context) error {
+	return nil
+}
+
+func newMockStorage() Storage {
+	return &mockStorage{map[string]commonmodels.Metric{
 		"gauge1": {
 			ID:    "gauge1",
 			MType: "gauge",
@@ -55,7 +60,9 @@ func newMockStorage() MetricStorageService {
 func newMockService() *MetricsService {
 	storage := newMockStorage()
 	return &MetricsService{
-		storageService: storage,
+		storage:      storage,
+		saveInterval: 10,
+		restore:      false,
 	}
 
 }
@@ -63,17 +70,17 @@ func newMockService() *MetricsService {
 func TestMetricsService_Find(t *testing.T) {
 	tests := []struct {
 		name    string
-		metric  common_models.Metrics
+		metric  commonmodels.Metric
 		want    any
 		wantErr bool
 	}{
 		{
 			"test find gauge value 1",
-			common_models.Metrics{
+			commonmodels.Metric{
 				ID:    "gauge1",
 				MType: "gauge",
 			},
-			common_models.Metrics{
+			commonmodels.Metric{
 				ID:    "gauge1",
 				MType: "gauge",
 				Value: gVal1,
@@ -82,29 +89,30 @@ func TestMetricsService_Find(t *testing.T) {
 		},
 		{
 			"test find unknown metric type",
-			common_models.Metrics{
+			commonmodels.Metric{
 				ID:    "gauge1",
 				MType: "unknown",
 			},
-			common_models.Metrics{},
+			commonmodels.Metric{},
 			true,
 		},
 		{
 			"test find unknown metric",
-			common_models.Metrics{
+			commonmodels.Metric{
 				ID:    "gau",
 				MType: "gauge",
 			},
-			common_models.Metrics{},
+			commonmodels.Metric{},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newMockService()
-			got, err := s.Find(tt.metric)
+			ctx := context.Background()
+			got, err := s.Find(ctx, tt.metric)
 			if (err != nil) != tt.wantErr {
-				assert.Errorf(t, err, "Find() error = %v, wantErr %v", err, tt.wantErr)
+				assert.Errorf(t, err, "find() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.Equal(t, tt.want, got)
@@ -121,22 +129,27 @@ func TestMetricsService_GetAll(t *testing.T) {
 		{
 			name: "test get all data from empty storageService",
 			service: &MetricsService{
-				storageService: &mockStorage{map[string]common_models.Metrics{}},
+				storage: &mockStorage{map[string]commonmodels.Metric{}},
 			},
 			want: map[string]any{},
 		},
 		{
 			name:    "test get all data from mocked storageService",
-			service: &MetricsService{storageService: newMockStorage()},
+			service: &MetricsService{storage: newMockStorage()},
 			want: map[string]any{
 				"gauge1":   1.1,
 				"counter1": int64(1),
 			},
 		},
 	}
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.service.GetAll())
+			all, err := tt.service.GetAll(ctx)
+			if err != nil {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, all)
 		})
 	}
 }
@@ -144,12 +157,12 @@ func TestMetricsService_GetAll(t *testing.T) {
 func TestMetricsService_Save(t *testing.T) {
 	tests := []struct {
 		name    string
-		metric  common_models.Metrics
+		metric  commonmodels.Metric
 		wantErr bool
 	}{
 		{
 			name: "test save valid data",
-			metric: common_models.Metrics{
+			metric: commonmodels.Metric{
 				ID:    "gau",
 				MType: "gauge",
 				Delta: cVal1,
@@ -158,7 +171,7 @@ func TestMetricsService_Save(t *testing.T) {
 		},
 		{
 			name: "test save valid data with invalid metric type",
-			metric: common_models.Metrics{
+			metric: commonmodels.Metric{
 				ID:    "gau",
 				MType: "unknown",
 				Delta: cVal1,
@@ -167,7 +180,7 @@ func TestMetricsService_Save(t *testing.T) {
 		},
 		{
 			name: "test save without data",
-			metric: common_models.Metrics{
+			metric: commonmodels.Metric{
 				ID:    "gau",
 				MType: "gauge",
 			},
@@ -177,8 +190,9 @@ func TestMetricsService_Save(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newMockService()
-			if err := s.Save(tt.metric); (err != nil) != tt.wantErr {
-				assert.Errorf(t, err, "Save() error = %v, wantErr %v", err, tt.wantErr)
+			ctx := context.Background()
+			if err := s.Save(ctx, tt.metric); (err != nil) != tt.wantErr {
+				assert.Errorf(t, err, "save() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

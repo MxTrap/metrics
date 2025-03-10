@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/common/utils"
 	"github.com/stretchr/testify/assert"
@@ -14,19 +15,19 @@ func TestMemStorage_Save(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args []common_models.Metrics
-		want map[string]common_models.Metrics
+		args []common_models.Metric
+		want map[string]common_models.Metric
 	}{
 		{
-			name: "Save counter metric",
-			args: []common_models.Metrics{
+			name: "save counter metric",
+			args: []common_models.Metric{
 				{
 					ID:    "metric",
 					MType: "counter",
 					Delta: p1,
 				},
 			},
-			want: map[string]common_models.Metrics{
+			want: map[string]common_models.Metric{
 				"metric": {
 					ID:    "metric",
 					MType: "counter",
@@ -35,8 +36,8 @@ func TestMemStorage_Save(t *testing.T) {
 			},
 		},
 		{
-			name: "Save some counter metric",
-			args: []common_models.Metrics{
+			name: "save some counter metric",
+			args: []common_models.Metric{
 				{
 					ID:    "metric1",
 					MType: "counter",
@@ -53,7 +54,7 @@ func TestMemStorage_Save(t *testing.T) {
 					Delta: p3,
 				},
 			},
-			want: map[string]common_models.Metrics{
+			want: map[string]common_models.Metric{
 				"metric1": {
 					ID:    "metric1",
 					MType: "counter",
@@ -72,8 +73,8 @@ func TestMemStorage_Save(t *testing.T) {
 			},
 		},
 		{
-			name: "Save same counter metrics",
-			args: []common_models.Metrics{
+			name: "save same counter metrics",
+			args: []common_models.Metric{
 				{
 					ID:    "metric1",
 					MType: "counter",
@@ -85,7 +86,7 @@ func TestMemStorage_Save(t *testing.T) {
 					Delta: p2,
 				},
 			},
-			want: map[string]common_models.Metrics{
+			want: map[string]common_models.Metric{
 				"metric1": {
 					ID:    "metric1",
 					MType: "counter",
@@ -97,10 +98,12 @@ func TestMemStorage_Save(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &MemStorage{
-				metrics: map[string]common_models.Metrics{},
+				metrics: map[string]common_models.Metric{},
 			}
+			ctx := context.TODO()
 			for _, arg := range tt.args {
-				s.Save(arg)
+				err := s.Save(ctx, arg)
+				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.want, s.metrics)
 		})
@@ -115,13 +118,15 @@ func TestNewMemStorage(t *testing.T) {
 		{
 			name: "test storage creation",
 			want: &MemStorage{
-				metrics: map[string]common_models.Metrics{},
+				metrics: map[string]common_models.Metric{},
 			},
 		},
 	}
 	for _, tt := range tests {
+		storage, err := NewMemStorage()
+		assert.NoError(t, err)
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, NewMemStorage(), tt.want)
+			assert.Equal(t, storage, tt.want)
 		})
 	}
 }

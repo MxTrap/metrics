@@ -11,7 +11,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	application := app.NewApp(cfg)
+	application, err := app.NewApp(cfg)
+	if err != nil {
+		log.Fatal("Application initialization failed")
+	}
 
 	application.Run()
+
+	defer application.Shutdown()
 }

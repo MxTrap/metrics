@@ -23,7 +23,7 @@ func NewMetricsFileStorage(filePath string) *MetricsFileStorage {
 	}
 }
 
-func (s MetricsFileStorage) Save(metrics map[string]common_models.Metrics) error {
+func (s MetricsFileStorage) Save(metrics map[string]common_models.Metric) error {
 	data, err := json.Marshal(metrics)
 
 	if err != nil {
@@ -45,7 +45,7 @@ func (s MetricsFileStorage) Save(metrics map[string]common_models.Metrics) error
 
 	return nil
 }
-func (s *MetricsFileStorage) Read() (map[string]common_models.Metrics, error) {
+func (s *MetricsFileStorage) Read() (map[string]common_models.Metric, error) {
 
 	var data []byte
 	scanner := bufio.NewScanner(s.file)
@@ -55,9 +55,9 @@ func (s *MetricsFileStorage) Read() (map[string]common_models.Metrics, error) {
 	}
 
 	if len(data) == 0 {
-		return map[string]common_models.Metrics{}, nil
+		return map[string]common_models.Metric{}, nil
 	}
-	var res map[string]common_models.Metrics
+	var res map[string]common_models.Metric
 	err := json.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
