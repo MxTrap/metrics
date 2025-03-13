@@ -1,4 +1,4 @@
-package postgres_storage
+package postgres
 
 const updateStmt = `UPDATE metric SET 
 	metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 

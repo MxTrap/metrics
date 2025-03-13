@@ -58,7 +58,7 @@ func (s *MetricsService) SaveAll(ctx context.Context, metrics []commonmodels.Met
 			continue
 		}
 		if val, ok := m[metric.ID]; metric.MType == commonmodels.Counter && ok {
-			*val.Delta = *metric.Delta + *val.Delta
+			*metric.Delta = *metric.Delta + *val.Delta
 		}
 
 		m[metric.ID] = metric
