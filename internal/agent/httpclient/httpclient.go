@@ -16,12 +16,10 @@ type HTTPClient struct {
 	serverURL      string
 	client         *http.Client
 	service        *service.MetricsObserverService
-	ctx            context.Context
 	reportInterval int
 }
 
 func NewHTTPClient(
-	ctx context.Context,
 	service *service.MetricsObserverService,
 	serverURL string,
 	reportInterval int,
@@ -30,23 +28,31 @@ func NewHTTPClient(
 
 	return &HTTPClient{
 		client:         client,
-		ctx:            ctx,
 		service:        service,
 		reportInterval: reportInterval,
 		serverURL:      serverURL,
 	}
 }
 
-func (h *HTTPClient) Run() {
-	go func(svc *service.MetricsObserverService) {
-		for h.ctx != nil {
-			h.sendMetrics()
-			time.Sleep(time.Duration(h.reportInterval) * time.Second)
+func (h *HTTPClient) Run(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * time.Duration(h.reportInterval))
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				err := h.sendMetrics(ctx)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
 		}
-	}(h.service)
+	}()
 }
 
-func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
+func (*HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	var b bytes.Buffer
 
 	gz, err := gzip.NewWriterLevel(&b, gzip.BestSpeed)
@@ -73,7 +79,7 @@ func (HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (h *HTTPClient) postMetric(metric common_models.Metrics) error {
+func (h *HTTPClient) postMetric(ctx context.Context, metric common_models.Metrics) error {
 	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
@@ -84,34 +90,42 @@ func (h *HTTPClient) postMetric(metric common_models.Metrics) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/updates/", h.serverURL), compressed)
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		fmt.Sprintf("http://%s/updates/", h.serverURL),
+		compressed,
+	)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
-	go func() {
-		var response *http.Response
-		for i := 0; i < 4; i++ {
-			response, err = h.client.Do(req)
-			if err == nil {
-				err := response.Body.Close()
-				if err != nil {
-					return
-				}
-				break
+	const maxRetryAmount = 3
+	var response *http.Response
+	for i := 0; i <= maxRetryAmount; i++ {
+		response, err = h.client.Do(req)
+		if err == nil {
+			err := response.Body.Close()
+			if err != nil {
+				return err
 			}
-			if i < 3 {
-				time.Sleep(time.Duration(1+2*i) * time.Second)
-			}
+			break
 		}
-	}()
+		if i < maxRetryAmount {
+			time.Sleep(time.Duration(1+2*i) * time.Second)
+		}
+	}
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (h *HTTPClient) sendMetrics() {
+func (h *HTTPClient) sendMetrics(ctx context.Context) error {
 	metrics := h.service.GetMetrics()
 
 	m := make([]common_models.Metric, 20)
@@ -130,8 +144,9 @@ func (h *HTTPClient) sendMetrics() {
 		Delta: &metrics.Counter.PollCount,
 	})
 
-	err := h.postMetric(m)
+	err := h.postMetric(ctx, m)
 	if err != nil {
-		return
+		return err
 	}
+	return nil
 }

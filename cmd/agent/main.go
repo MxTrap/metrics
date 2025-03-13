@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/agent/app"
 	"log"
@@ -11,17 +12,23 @@ import (
 
 func main() {
 	cfg, err := config.NewAgentConfig()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	clientApp := app.NewApp(cfg)
 
-	clientApp.Run()
+	err = clientApp.Run(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
 	<-stop
+
+	cancel()
 
 }
