@@ -54,17 +54,14 @@ func (MetricsService) validateMetric(metricType string) bool {
 func (s *MetricsService) SaveAll(ctx context.Context, metrics []commonmodels.Metric) error {
 	m := make(map[string]commonmodels.Metric)
 	for _, metric := range metrics {
-		if s.validateMetric(metric.MType) {
-			if metric.MType == commonmodels.Counter {
-				val, ok := m[metric.ID]
-				if ok {
-					*val.Delta = *metric.Delta + *val.Delta
-					m[metric.ID] = val
-					continue
-				}
-			}
-			m[metric.ID] = metric
+		if !s.validateMetric(metric.MType) {
+			continue
 		}
+		if val, ok := m[metric.ID]; metric.MType == commonmodels.Counter && ok {
+			*val.Delta = *metric.Delta + *val.Delta
+		}
+
+		m[metric.ID] = metric
 	}
 
 	err := s.storage.SaveAll(ctx, m)
@@ -161,14 +158,19 @@ func (s *MetricsService) Start(ctx context.Context) error {
 
 	if s.saveInterval > 0 {
 		s.ticker = time.NewTicker(time.Duration(s.saveInterval) * time.Second)
-		go func() {
-			for range s.ticker.C {
-				err := s.saveToFile(ctx)
-				if err != nil {
+		go func(ctx context.Context) {
+			for {
+				select {
+				case <-ctx.Done():
 					return
+				case <-s.ticker.C:
+					err := s.saveToFile(ctx)
+					if err != nil {
+						return
+					}
 				}
 			}
-		}()
+		}(ctx)
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-package repository
+package postgres_storage
 
 import (
 	"context"
@@ -13,9 +13,8 @@ import (
 )
 
 type PostgresStorage struct {
-	db      *pgxpool.Pool
-	connStr string
-	log     *logger.Logger
+	db  *pgxpool.Pool
+	log *logger.Logger
 }
 
 type dbMetric struct {
@@ -26,20 +25,15 @@ type dbMetric struct {
 	Delta *int64   `db:"delta"`
 }
 
-func NewPostgresStorage(ctx context.Context, conString string, log *logger.Logger) (*PostgresStorage, error) {
-	db, err := pgxpool.New(ctx, conString)
-	if err != nil {
-		return &PostgresStorage{}, err
-	}
+func NewPostgresStorage(db *pgxpool.Pool, log *logger.Logger) (*PostgresStorage, error) {
 
 	return &PostgresStorage{
-		db:      db,
-		connStr: conString,
-		log:     log,
+		db:  db,
+		log: log,
 	}, nil
 }
 
-func (PostgresStorage) mapCommonToDBMetric(metric models.Metric) dbMetric {
+func (*PostgresStorage) mapCommonToDBMetric(metric models.Metric) dbMetric {
 	return dbMetric{
 		MType: metric.MType,
 		Name:  metric.ID,
@@ -48,7 +42,7 @@ func (PostgresStorage) mapCommonToDBMetric(metric models.Metric) dbMetric {
 	}
 }
 
-func (PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
+func (*PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
 	return models.Metric{
 		ID:    metric.Name,
 		MType: metric.MType,
@@ -57,9 +51,9 @@ func (PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
 	}
 }
 
-func (PostgresStorage) withRetry(cb func() error) error {
-
-	for i := 0; i < 4; i++ {
+func (*PostgresStorage) withRetry(cb func() error) error {
+	const maxRetryAmount = 3
+	for i := 0; i <= maxRetryAmount; i++ {
 		err := cb()
 		if err == nil {
 			return nil
@@ -70,7 +64,7 @@ func (PostgresStorage) withRetry(cb func() error) error {
 			return err
 		}
 
-		if i < 3 {
+		if i < maxRetryAmount {
 			time.Sleep(time.Duration(1+2*i) * time.Second)
 		}
 	}
@@ -96,22 +90,12 @@ func (s *PostgresStorage) Save(ctx context.Context, metric models.Metric) error 
 			return err
 		}
 
-		updStmt := `UPDATE metric SET 
-                  metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 
-                  metric_name = $2, 
-                  value=$3,
-                  delta = delta + $4
-              	WHERE metric_name = $2;`
-
-		exec, err := tx.Exec(ctx, updStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
+		exec, err := tx.Exec(ctx, updateStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
 		if err != nil {
 			return err
 		}
 		if exec.RowsAffected() == 0 {
-			sqlStmt := `INSERT INTO metric (metric_type_id, metric_name, value, delta)
-						VALUES ((SELECT id FROM metric_type WHERE metric_type = $1), $2, $3, $4);`
-
-			_, err := tx.Exec(ctx, sqlStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
+			_, err := tx.Exec(ctx, insertStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
 			if err != nil {
 				err := tx.Rollback(ctx)
 				if err != nil {
@@ -136,8 +120,7 @@ func (s *PostgresStorage) Find(ctx context.Context, metricName string) (models.M
 	err := s.withRetry(func() error {
 		rows, err := s.db.Query(
 			ctx,
-			`SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
-    			JOIN metric_type AS t ON m.metric_type_id = t.id WHERE m.metric_name = $1;`, metricName,
+			findStmt, metricName,
 		)
 
 		if err != nil {
@@ -168,11 +151,7 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metric,
 	var metrics map[string]models.Metric
 
 	err := s.withRetry(func() error {
-		rows, err := s.db.Query(
-			ctx,
-			`SELECT m.id, t.metric_type, m.metric_name, m.value, m.delta FROM metric AS m 
-    		JOIN metric_type AS t ON m.metric_type_id = t.id;`,
-		)
+		rows, err := s.db.Query(ctx, selectAllStmt)
 		if err != nil {
 			return err
 		}
@@ -199,13 +178,6 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 	s.log.Logger.Info("Save all")
 
 	return s.withRetry(func() error {
-		updStmt := `UPDATE metric SET 
-                  metric_type_id = (SELECT id FROM metric_type WHERE metric_type = $1), 
-                  metric_name = $2, 
-                  value=$3,
-                  delta = delta + $4
-              	WHERE metric_name = $2;`
-
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
 			return err
@@ -213,7 +185,7 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 
 		batchUpdate := pgx.Batch{}
 		for _, metric := range metrics {
-			batchUpdate.Queue(updStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
+			batchUpdate.Queue(updateStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
 		}
 
 		batchResult := tx.SendBatch(ctx, &batchUpdate)
@@ -236,9 +208,6 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 		}
 
 		if len(insertRows) > 0 {
-			insertStmt := `INSERT INTO metric (metric_type_id, metric_name, value, delta)
-							VALUES ((SELECT id FROM metric_type WHERE metric_type = $1), $2, $3, $4);`
-
 			insertBatch := pgx.Batch{}
 
 			for _, metric := range insertRows {
