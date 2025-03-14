@@ -16,7 +16,7 @@ type AgentConfig struct {
 func NewAgentConfig() (*AgentConfig, error) {
 	rInterval := flag.Int("r", 10, "interval of sending data to server")
 	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
-	key := flag.String("key", "", "secret key")
+	key := flag.String("k", "", "secret key")
 	httpConfig := NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()

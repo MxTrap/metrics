@@ -23,20 +23,11 @@ func HashDecodeMiddleware(key string) gin.HandlerFunc {
 				c.AbortWithStatus(http.StatusBadRequest)
 				return
 			}
-
-			if err != nil {
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
 			var bodyBytes []byte
 			if c.Request.Body != nil {
 				bodyBytes, _ = io.ReadAll(c.Request.Body)
 			}
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-			if err != nil {
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
 			if err != nil {
 				c.AbortWithStatus(http.StatusBadRequest)
 				return
