@@ -13,7 +13,7 @@ import (
 
 func HashDecodeMiddleware(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if key != "" && strings.Contains(c.Request.URL.String(), "update") {
+		if key != "" && strings.Contains(c.Request.URL.String(), "updates") {
 			hashHeaderStr := c.Request.Header.Get("HashSHA256")
 			if hashHeaderStr == "" {
 				c.AbortWithStatus(http.StatusBadRequest)
