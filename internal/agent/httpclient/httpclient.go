@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/service"
 	common_models "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/mailru/easyjson"
+	"io"
 	"net/http"
 	"time"
 )
@@ -17,12 +21,14 @@ type HTTPClient struct {
 	client         *http.Client
 	service        *service.MetricsObserverService
 	reportInterval int
+	key            string
 }
 
 func NewHTTPClient(
 	service *service.MetricsObserverService,
 	serverURL string,
 	reportInterval int,
+	key string,
 ) *HTTPClient {
 	client := &http.Client{}
 
@@ -31,11 +37,12 @@ func NewHTTPClient(
 		service:        service,
 		reportInterval: reportInterval,
 		serverURL:      serverURL,
+		key:            key,
 	}
 }
 
-func (h *HTTPClient) Run(ctx context.Context) {
-	ticker := time.NewTicker(time.Second * time.Duration(h.reportInterval))
+func (c *HTTPClient) Run(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * time.Duration(c.reportInterval))
 	go func() {
 		for {
 			select {
@@ -43,7 +50,7 @@ func (h *HTTPClient) Run(ctx context.Context) {
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				err := h.sendMetrics(ctx)
+				err := c.sendMetrics(ctx)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -79,21 +86,21 @@ func (*HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (h *HTTPClient) postMetric(ctx context.Context, metric common_models.Metrics) error {
+func (c *HTTPClient) postMetric(ctx context.Context, metric common_models.Metrics) error {
 	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
 		return err
 	}
 
-	compressed, err := h.compress(body)
+	compressed, err := c.compress(body)
 	if err != nil {
 		return err
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		fmt.Sprintf("http://%s/updates/", h.serverURL),
+		fmt.Sprintf("http://%s/updates/", c.serverURL),
 		compressed,
 	)
 	if err != nil {
@@ -102,10 +109,25 @@ func (h *HTTPClient) postMetric(ctx context.Context, metric common_models.Metric
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
+	if c.key != "" {
+		h := hmac.New(sha256.New, []byte(c.key))
+		cBody, err := req.GetBody()
+		if err != nil {
+			return err
+		}
+		all, err := io.ReadAll(cBody)
+		if err != nil {
+			return err
+		}
+		h.Write(all)
+		dst := h.Sum(nil)
+		req.Header.Set("HashSHA256", hex.EncodeToString(dst))
+	}
+
 	const maxRetryAmount = 3
 	var response *http.Response
 	for i := 0; i <= maxRetryAmount; i++ {
-		response, err = h.client.Do(req)
+		response, err = c.client.Do(req)
 		if err == nil {
 			err := response.Body.Close()
 			if err != nil {
@@ -125,8 +147,8 @@ func (h *HTTPClient) postMetric(ctx context.Context, metric common_models.Metric
 	return nil
 }
 
-func (h *HTTPClient) sendMetrics(ctx context.Context) error {
-	metrics := h.service.GetMetrics()
+func (c *HTTPClient) sendMetrics(ctx context.Context) error {
+	metrics := c.service.GetMetrics()
 
 	m := make([]common_models.Metric, 20)
 
@@ -144,7 +166,7 @@ func (h *HTTPClient) sendMetrics(ctx context.Context) error {
 		Delta: &metrics.Counter.PollCount,
 	})
 
-	err := h.postMetric(ctx, m)
+	err := c.postMetric(ctx, m)
 	if err != nil {
 		return err
 	}

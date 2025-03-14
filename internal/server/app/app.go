@@ -54,7 +54,7 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 	}
 
 	metricsService := service.NewMetricsService(fileStorage, storage, cfg.StoreInterval, cfg.Restore)
-	httpRouter := httpserver.NewRouter(cfg.HTTP, log)
+	httpRouter := httpserver.NewRouter(cfg.HTTP, log, cfg.Key)
 	metricHandler := handlers.NewMetricHandler(metricsService, httpRouter.Router)
 	metricHandler.RegisterRoutes()
 
