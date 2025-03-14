@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 func HashDecodeMiddleware(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if key != "" && strings.Contains(c.Request.URL.String(), "updates") {
+			fmt.Println("sdadsadasdas dasd ad s dad a s")
 			hashHeaderStr := c.Request.Header.Get("HashSHA256")
 			if hashHeaderStr == "" {
 				c.AbortWithStatus(http.StatusBadRequest)
