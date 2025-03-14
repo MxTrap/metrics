@@ -8,11 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func HashDecodeMiddleware(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if key != "" && c.Request.Method != http.MethodGet {
+		if key != "" && strings.Contains(c.Request.URL.String(), "update") {
 			hashHeaderStr := c.Request.Header.Get("HashSHA256")
 			if hashHeaderStr == "" {
 				c.AbortWithStatus(http.StatusBadRequest)
@@ -28,14 +29,9 @@ func HashDecodeMiddleware(key string) gin.HandlerFunc {
 				bodyBytes, _ = io.ReadAll(c.Request.Body)
 			}
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-			if err != nil {
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
+
 			h := hmac.New(sha256.New, []byte(key))
-
 			h.Write(bodyBytes)
-
 			if !hmac.Equal(hashHeader, h.Sum(nil)) {
 				c.AbortWithStatus(http.StatusBadRequest)
 				return
