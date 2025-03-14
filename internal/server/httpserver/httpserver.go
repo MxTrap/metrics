@@ -19,13 +19,15 @@ type logger interface {
 	LoggerMiddleware() gin.HandlerFunc
 }
 
-func NewRouter(cfg config.HTTPConfig, log logger) *HTTPServer {
+func NewRouter(cfg config.HTTPConfig, log logger, key string) *HTTPServer {
 	router := gin.New()
 	router.Use(
 		log.LoggerMiddleware(),
 		gin.Recovery(),
+		middlewares.HashDecodeMiddleware(key),
 		middlewares.ContentEncodingMiddleware(),
 		middlewares.AcceptEncodingMiddleware(),
+		middlewares.HashEncodeMiddleware(key),
 		middlewares.StatusErrorMiddleware(),
 	)
 	router.HandleMethodNotAllowed = true

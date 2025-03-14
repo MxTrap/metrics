@@ -16,29 +16,28 @@ type MetricsStorage interface {
 type MetricsObserverService struct {
 	storage      MetricsStorage
 	pollInterval int
-	ctx          context.Context
 }
 
-func NewMetricsObserverService(ctx context.Context, service MetricsStorage, pollInterval int) *MetricsObserverService {
+func NewMetricsObserverService(service MetricsStorage, pollInterval int) *MetricsObserverService {
 	return &MetricsObserverService{
-		ctx:          ctx,
 		storage:      service,
 		pollInterval: pollInterval,
 	}
 }
 
-func (s *MetricsObserverService) Run() {
-
+func (s *MetricsObserverService) Run(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * time.Duration(s.pollInterval))
 	go func(service *MetricsObserverService) {
-		for s.ctx != nil {
-			s.CollectMetrics()
-			time.Sleep(time.Duration(s.pollInterval) * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				service.CollectMetrics()
+			}
 		}
 	}(s)
-}
-
-func (s *MetricsObserverService) Stop() {
-	s.ctx = nil
 }
 
 func (s *MetricsObserverService) CollectMetrics() {

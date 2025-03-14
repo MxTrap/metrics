@@ -12,12 +12,14 @@ type ServerConfig struct {
 	FileStoragePath string     `env:"FILE_STORAGE_PATH"`
 	Restore         bool       `env:"RESTORE"`
 	DatabaseDSN     string     `env:"DATABASE_DSN"`
+	Key             string     `env:"KEY"`
 }
 
 func NewServerConfig() (*ServerConfig, error) {
 	sInterval := flag.Int("i", 300, "interval of saving data to file")
 	sPath := flag.String("f", "./temp.txt", "path to file")
 	restore := flag.Bool("r", false, "restore data")
+	key := flag.String("k", "", "secret key")
 	//postgres://postgres:admin@localhost:5432/metrics?sslmode=disable
 	databaseDSN := flag.String("d", "", "database DSN")
 	httpConfig := NewDefaultConfig()
@@ -30,6 +32,7 @@ func NewServerConfig() (*ServerConfig, error) {
 		FileStoragePath: *sPath,
 		Restore:         *restore,
 		DatabaseDSN:     *databaseDSN,
+		Key:             *key,
 	}
 
 	err := env.ParseWithFuncs(cfg, map[reflect.Type]env.ParserFunc{
