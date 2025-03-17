@@ -22,6 +22,7 @@ func NewApp(cfg *config.AgentConfig) *App {
 		fmt.Sprintf("%s:%d", cfg.ServerConfig.Host, cfg.ServerConfig.Port),
 		cfg.ReportInterval,
 		cfg.Key,
+		cfg.RateLimit,
 	)
 
 	return &App{
