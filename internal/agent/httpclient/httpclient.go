@@ -22,6 +22,7 @@ type HTTPClient struct {
 	service        *service.MetricsObserverService
 	reportInterval int
 	key            string
+	rateLimit      int
 }
 
 func NewHTTPClient(
@@ -29,6 +30,7 @@ func NewHTTPClient(
 	serverURL string,
 	reportInterval int,
 	key string,
+	rateLimit int,
 ) *HTTPClient {
 	client := &http.Client{}
 
@@ -38,6 +40,7 @@ func NewHTTPClient(
 		reportInterval: reportInterval,
 		serverURL:      serverURL,
 		key:            key,
+		rateLimit:      rateLimit,
 	}
 }
 

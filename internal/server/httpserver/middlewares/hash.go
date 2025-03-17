@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -15,7 +14,6 @@ import (
 func HashDecodeMiddleware(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if key != "" && strings.Contains(c.Request.URL.String(), "updates") {
-			fmt.Println("sdadsadasdas dasd ad s dad a s")
 			hashHeaderStr := c.Request.Header.Get("HashSHA256")
 			if hashHeaderStr == "" {
 				c.AbortWithStatus(http.StatusBadRequest)
@@ -26,14 +24,22 @@ func HashDecodeMiddleware(key string) gin.HandlerFunc {
 				c.AbortWithStatus(http.StatusBadRequest)
 				return
 			}
-			var bodyBytes []byte
-			if c.Request.Body != nil {
-				bodyBytes, _ = io.ReadAll(c.Request.Body)
+			var bodyBuffer bytes.Buffer
+
+			_, err = bodyBuffer.ReadFrom(c.Request.Body)
+			if err != nil {
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
 			}
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+			if err = c.Request.Body.Close(); err != nil {
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+			c.Request.Body = io.NopCloser(&bodyBuffer)
 
 			h := hmac.New(sha256.New, []byte(key))
-			h.Write(bodyBytes)
+			h.Write(bodyBuffer.Bytes())
 			if !hmac.Equal(hashHeader, h.Sum(nil)) {
 				c.AbortWithStatus(http.StatusBadRequest)
 				return

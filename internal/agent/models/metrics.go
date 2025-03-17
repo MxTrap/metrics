@@ -1,6 +1,7 @@
 package models
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -19,7 +20,7 @@ func NewGaugeMetrics() *GaugeMetrics {
 func (c *GaugeMetrics) Load(m map[string]float64) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
-	c.Metrics = m
+	maps.Copy(c.Metrics, m)
 }
 
 func (c *GaugeMetrics) Get(key string) (float64, bool) {

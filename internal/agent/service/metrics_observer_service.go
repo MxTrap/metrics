@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/MxTrap/metrics/internal/agent/mappers"
 	"github.com/MxTrap/metrics/internal/agent/models"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	"runtime"
 	"time"
 )
@@ -31,19 +33,47 @@ func (s *MetricsObserverService) Run(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				ticker.Stop()
 				return
 			case <-ticker.C:
-				service.CollectMetrics()
+				service.collectMemStatMetrics()
 			}
 		}
 	}(s)
+	go func(service *MetricsObserverService) {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				service.collectGopsutilMetrics()
+			}
+		}
+	}(s)
+
+	<-ctx.Done()
+	ticker.Stop()
 }
 
-func (s *MetricsObserverService) CollectMetrics() {
+func (s *MetricsObserverService) collectMemStatMetrics() {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	s.storage.SaveMetrics(mappers.MapGaugeMetrics(ms))
+}
+
+func (s *MetricsObserverService) collectGopsutilMetrics() {
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		return
+	}
+	info, err := cpu.Percent(0, false)
+	if err != nil || len(info) == 0 {
+		return
+	}
+	s.storage.SaveMetrics(map[string]float64{
+		"TotalMemory":     float64(v.Total),
+		"FreeMemory":      float64(v.Free),
+		"CPUutilization1": info[0],
+	})
 }
 
 func (s *MetricsObserverService) GetMetrics() models.Metrics {
