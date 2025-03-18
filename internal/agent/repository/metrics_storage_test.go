@@ -92,6 +92,7 @@ func TestMetricsStorage_SaveMetrics(t *testing.T) {
 			want: models.Metrics{
 				Gauge: models.GaugeMetrics{
 					Metrics: map[string]float64{
+						"gauge1":      1,
 						"gauge2":      2,
 						"gauge3":      3.3,
 						"RandomValue": 1,
