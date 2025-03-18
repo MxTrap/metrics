@@ -32,7 +32,8 @@ func NewApp(cfg *config.AgentConfig) *App {
 }
 
 func (a App) Run(ctx context.Context) error {
-	a.service.Run(ctx)
-	a.client.Run(ctx)
+	fmt.Println("starting metrics observer")
+	go a.service.Run(ctx)
+	go a.client.Run(ctx)
 	return nil
 }

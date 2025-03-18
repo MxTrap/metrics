@@ -13,6 +13,7 @@ import (
 	"github.com/mailru/easyjson"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -46,20 +47,51 @@ func NewHTTPClient(
 
 func (c *HTTPClient) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * time.Duration(c.reportInterval))
+	inCh := make(chan struct{})
+	resCh := make(chan error)
+	wg := &sync.WaitGroup{}
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				ticker.Stop()
+				close(inCh)
 				return
 			case <-ticker.C:
-				err := c.sendMetrics(ctx)
-				if err != nil {
-					fmt.Println(err)
-				}
+				inCh <- struct{}{}
 			}
 		}
 	}()
+	for i := 0; i < c.rateLimit; i++ {
+		wg.Add(1)
+		go func(i int) {
+			for {
+				select {
+				case <-ctx.Done():
+					close(resCh)
+					wg.Done()
+					return
+				case <-inCh:
+					err := c.sendMetrics(ctx)
+					if err != nil {
+						resCh <- fmt.Errorf("Error from gorutine %d: %w", i, err)
+					}
+				}
+			}
+		}(i)
+	}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case err := <-resCh:
+				fmt.Println(err)
+			}
+		}
+	}()
+
+	wg.Wait()
+	ticker.Stop()
 }
 
 func (*HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
