@@ -73,7 +73,7 @@ func (c *HTTPClient) Run(ctx context.Context) {
 				case <-inCh:
 					err := c.sendMetrics(ctx)
 					if err != nil {
-						resCh <- fmt.Errorf("Error from gorutine %d: %w", i, err)
+						resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
 					}
 				}
 			}
