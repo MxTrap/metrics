@@ -10,34 +10,30 @@ import (
 )
 
 type App struct {
-	ctx     context.Context
 	service *service.MetricsObserverService
 	client  *httpclient.HTTPClient
 }
 
 func NewApp(cfg *config.AgentConfig) *App {
-	ctx := context.Background()
 	storage := repository.NewMetricsStorage()
-	mService := service.NewMetricsObserverService(ctx, storage, cfg.PollInterval)
+	mService := service.NewMetricsObserverService(storage, cfg.PollInterval)
 	client := httpclient.NewHTTPClient(
-		ctx,
 		mService,
 		fmt.Sprintf("%s:%d", cfg.ServerConfig.Host, cfg.ServerConfig.Port),
 		cfg.ReportInterval,
+		cfg.Key,
+		cfg.RateLimit,
 	)
 
 	return &App{
-		ctx:     ctx,
 		service: mService,
 		client:  client,
 	}
 }
 
-func (a App) Run() {
-	a.service.Run()
-	a.client.Run()
-}
-
-func (a App) Shutdown() {
-	a.ctx.Done()
+func (a App) Run(ctx context.Context) error {
+	fmt.Println("starting metrics observer")
+	go a.service.Run(ctx)
+	go a.client.Run(ctx)
+	return nil
 }

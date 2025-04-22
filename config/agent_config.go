@@ -10,11 +10,15 @@ type AgentConfig struct {
 	ServerConfig   HTTPConfig `env:"ADDRESS"`
 	ReportInterval int        `env:"REPORT_INTERVAL"`
 	PollInterval   int        `env:"POLL_INTERVAL"`
+	Key            string     `env:"KEY"`
+	RateLimit      int        `env:"RATE_LIMIT"`
 }
 
 func NewAgentConfig() (*AgentConfig, error) {
 	rInterval := flag.Int("r", 10, "interval of sending data to server")
 	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
+	key := flag.String("k", "", "secret key")
+	rateLimit := flag.Int("l", 1, "rate limit")
 	httpConfig := NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
@@ -23,6 +27,8 @@ func NewAgentConfig() (*AgentConfig, error) {
 		ServerConfig:   httpConfig,
 		ReportInterval: *rInterval,
 		PollInterval:   *pInterval,
+		Key:            *key,
+		RateLimit:      *rateLimit,
 	}
 
 	err := env.ParseWithFuncs(agentConfig, map[reflect.Type]env.ParserFunc{
