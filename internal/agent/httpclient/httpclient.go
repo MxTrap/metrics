@@ -61,36 +61,31 @@ func (c *HTTPClient) Run(ctx context.Context) {
 			}
 		}
 	}()
-	for i := 0; i < c.rateLimit; i++ {
-		wg.Add(1)
-		go func(i int) {
-			for {
-				select {
-				case <-ctx.Done():
-					close(resCh)
-					wg.Done()
-					return
-				case <-inCh:
-					err := c.sendMetrics(ctx)
-					if err != nil {
-						resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
+	go func() {
+		for i := 0; i < c.rateLimit; i++ {
+			wg.Add(1)
+			go func(i int) {
+				for {
+					select {
+					case <-ctx.Done():
+						wg.Done()
+						return
+					case <-inCh:
+						err := c.sendMetrics(ctx)
+						if err != nil {
+							resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
+						}
 					}
 				}
-			}
-		}(i)
-	}
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case err := <-resCh:
-				fmt.Println(err)
-			}
+			}(i)
+			wg.Wait()
+			close(resCh)
 		}
 	}()
 
-	wg.Wait()
+	for res := range resCh {
+		fmt.Println(res)
+	}
 	ticker.Stop()
 }
 

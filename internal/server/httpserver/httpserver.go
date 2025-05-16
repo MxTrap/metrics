@@ -6,6 +6,7 @@ import (
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/httpserver/middlewares"
 	"github.com/MxTrap/metrics/internal/utils"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -43,6 +44,7 @@ func NewRouter(cfg config.HTTPConfig, log logger, key string) *HTTPServer {
 }
 
 func (h HTTPServer) Run() error {
+	pprof.Register(h.Router)
 	return h.server.ListenAndServe()
 }
 
