@@ -1,3 +1,5 @@
+// Package service предоставляет сервис для сбора и хранения системных метрик.
+// Реализует MetricsObserverService, который периодически собирает метрики памяти и CPU, сохраняя их в хранилище.
 package service
 
 import (
@@ -20,6 +22,8 @@ type MetricsObserverService struct {
 	pollInterval int
 }
 
+// NewMetricsObserverService создаёт новый MetricsObserverService с указанным хранилищем и интервалом опроса.
+// Возвращает указатель на инициализированный MetricsObserverService.
 func NewMetricsObserverService(service MetricsStorage, pollInterval int) *MetricsObserverService {
 	return &MetricsObserverService{
 		storage:      service,
@@ -27,6 +31,8 @@ func NewMetricsObserverService(service MetricsStorage, pollInterval int) *Metric
 	}
 }
 
+// Run запускает сервис, периодически собирая метрики памяти и CPU.
+// Выполняется до отмены контекста, после чего останавливает сбор метрик.
 func (s *MetricsObserverService) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * time.Duration(s.pollInterval))
 	go func(service *MetricsObserverService) {
@@ -54,12 +60,16 @@ func (s *MetricsObserverService) Run(ctx context.Context) {
 	ticker.Stop()
 }
 
+// collectMemStatMetrics собирает метрики памяти с использованием runtime.MemStats.
+// Сохраняет метрики в хранилище через SaveMetrics.
 func (s *MetricsObserverService) collectMemStatMetrics() {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	s.storage.SaveMetrics(mappers.MapGaugeMetrics(ms))
 }
 
+// collectGopsutilMetrics собирает метрики памяти и CPU с использованием gopsutil.
+// Сохраняет метрики общей и свободной памяти, а также использования CPU в хранилище.
 func (s *MetricsObserverService) collectGopsutilMetrics() {
 	v, err := mem.VirtualMemory()
 	if err != nil {
@@ -76,6 +86,8 @@ func (s *MetricsObserverService) collectGopsutilMetrics() {
 	})
 }
 
+// GetMetrics возвращает все метрики из хранилища.
+// Возвращает структуру models.Metrics, содержащую сохранённые метрики.
 func (s *MetricsObserverService) GetMetrics() models.Metrics {
 	return s.storage.GetMetrics()
 }

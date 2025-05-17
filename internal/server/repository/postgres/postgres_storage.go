@@ -1,3 +1,5 @@
+// Package postgres предоставляет хранилище метрик в базе данных PostgreSQL.
+// Реализует Storage для сохранения, получения и управления метриками с использованием пула соединений.
 package postgres
 
 import (
@@ -13,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PostgresStorage struct {
+type Storage struct {
 	db  *pgxpool.Pool
 	log *logger.Logger
 }
@@ -26,15 +28,16 @@ type dbMetric struct {
 	Delta *int64   `db:"delta"`
 }
 
-func NewPostgresStorage(db *pgxpool.Pool, log *logger.Logger) (*PostgresStorage, error) {
-
-	return &PostgresStorage{
+// NewPostgresStorage создаёт новое хранилище метрик для PostgreSQL с указанным пулом соединений и логгером.
+// Возвращает указатель на инициализированный Storage или ошибку.
+func NewPostgresStorage(db *pgxpool.Pool, log *logger.Logger) (*Storage, error) {
+	return &Storage{
 		db:  db,
 		log: log,
 	}, nil
 }
 
-func (*PostgresStorage) mapCommonToDBMetric(metric models.Metric) dbMetric {
+func (*Storage) mapCommonToDBMetric(metric models.Metric) dbMetric {
 	return dbMetric{
 		MType: metric.MType,
 		Name:  metric.ID,
@@ -43,7 +46,7 @@ func (*PostgresStorage) mapCommonToDBMetric(metric models.Metric) dbMetric {
 	}
 }
 
-func (*PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
+func (*Storage) mapDBToCommonMetric(metric dbMetric) models.Metric {
 	return models.Metric{
 		ID:    metric.Name,
 		MType: metric.MType,
@@ -52,7 +55,7 @@ func (*PostgresStorage) mapDBToCommonMetric(metric dbMetric) models.Metric {
 	}
 }
 
-func (*PostgresStorage) withRetry(cb func() error) error {
+func (*Storage) withRetry(cb func() error) error {
 	const maxRetryAmount = 3
 	for i := 0; i <= maxRetryAmount; i++ {
 		err := cb()
@@ -73,7 +76,9 @@ func (*PostgresStorage) withRetry(cb func() error) error {
 	return nil
 }
 
-func (s *PostgresStorage) Ping(ctx context.Context) error {
+// Ping проверяет доступность базы данных.
+// Возвращает ошибку, если база данных не инициализирована или недоступна.
+func (s *Storage) Ping(ctx context.Context) error {
 	if s.db == nil {
 		return errors.New("database not initialized")
 	}
@@ -81,7 +86,10 @@ func (s *PostgresStorage) Ping(ctx context.Context) error {
 	return s.db.Ping(ctx)
 }
 
-func (s *PostgresStorage) Save(ctx context.Context, metric models.Metric) error {
+// Save сохраняет метрику в базе данных.
+// Выполняет обновление или вставку с повторными попытками при необходимости.
+// Возвращает ошибку при неудаче.
+func (s *Storage) Save(ctx context.Context, metric models.Metric) error {
 	s.log.Logger.Info("Save")
 
 	return s.withRetry(func() error {
@@ -113,7 +121,9 @@ func (s *PostgresStorage) Save(ctx context.Context, metric models.Metric) error 
 	})
 }
 
-func (s *PostgresStorage) Find(ctx context.Context, metricName string) (models.Metric, error) {
+// Find получает метрику по её идентификатору из базы данных.
+// Возвращает метрику или ошибку, если метрика не найдена.
+func (s *Storage) Find(ctx context.Context, metricName string) (models.Metric, error) {
 	s.log.Logger.Info("Find")
 
 	var metric models.Metric
@@ -146,7 +156,9 @@ func (s *PostgresStorage) Find(ctx context.Context, metricName string) (models.M
 	return metric, nil
 }
 
-func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metric, error) {
+// GetAll возвращает все метрики из базы данных.
+// Возвращает карту метрик или ошибку при неудаче.
+func (s *Storage) GetAll(ctx context.Context) (map[string]models.Metric, error) {
 	s.log.Logger.Info("Get all")
 
 	var metrics map[string]models.Metric
@@ -175,7 +187,10 @@ func (s *PostgresStorage) GetAll(ctx context.Context) (map[string]models.Metric,
 	return metrics, nil
 }
 
-func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models.Metric) error {
+// SaveAll сохраняет набор метрик в базе данных.
+// Выполняет пакетное обновление или вставку с повторными попытками при необходимости.
+// Возвращает ошибку при неудаче.
+func (s *Storage) SaveAll(ctx context.Context, metrics map[string]models.Metric) error {
 	s.log.Logger.Info("Save all")
 
 	return s.withRetry(func() error {
@@ -244,6 +259,7 @@ func (s *PostgresStorage) SaveAll(ctx context.Context, metrics map[string]models
 	})
 }
 
-func (s *PostgresStorage) Close() {
+// Close закрывает пул соединений с базой данных.
+func (s *Storage) Close() {
 	s.db.Close()
 }

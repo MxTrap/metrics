@@ -10,7 +10,7 @@ func MapGaugeMetrics(ms runtime.MemStats) map[string]float64 {
 		"BuckHashSys":   float64(ms.BuckHashSys),
 		"Frees":         float64(ms.Frees),
 		"GCCPUFraction": ms.GCCPUFraction,
-		"GCSys":         float64(ms.Sys),
+		"GCSys":         float64(ms.GCSys),
 		"HeapAlloc":     float64(ms.HeapAlloc),
 		"HeapIdle":      float64(ms.HeapIdle),
 		"HeapInuse":     float64(ms.HeapInuse),
