@@ -1,8 +1,8 @@
 module github.com/MxTrap/metrics
 
-go 1.23.0
+go 1.22.12
 
-toolchain go1.23.7
+toolchain go1.22.12
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
