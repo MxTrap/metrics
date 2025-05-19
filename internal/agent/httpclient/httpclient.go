@@ -184,7 +184,7 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 func (c *HTTPClient) sendMetrics(ctx context.Context) error {
 	metrics := c.service.GetMetrics()
 
-	m := make([]commonmodels.Metric, 20)
+	m := make([]commonmodels.Metric, 0, len(metrics.Gauge.Metrics)+1)
 
 	metrics.Gauge.Range(func(key string, value float64) {
 		m = append(m, commonmodels.Metric{

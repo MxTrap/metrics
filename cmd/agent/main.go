@@ -5,6 +5,8 @@ import (
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/agent/app"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,6 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	http.ListenAndServe(":8081", nil)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
