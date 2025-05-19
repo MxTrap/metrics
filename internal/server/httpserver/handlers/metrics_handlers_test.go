@@ -45,6 +45,105 @@ func (m *MockMetricService) Ping(ctx context.Context) error {
 	return args.Error(0)
 }
 
+// saveJSON обрабатывает POST-запросы для сохранения одной метрики из JSON-данных.
+// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+func (h MetricsHandler) saveJSON(g *gin.Context) {
+	rawData, err := g.GetRawData()
+	if err != nil {
+		g.Status(http.StatusBadRequest)
+		return
+	}
+	m, err := h.parseMetric(rawData)
+
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+
+	err = h.service.Save(g, m)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+	g.Status(http.StatusOK)
+}
+
+// save обрабатывает POST-запросы для сохранения одной метрики из параметров URL.
+// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+func (h MetricsHandler) save(g *gin.Context) {
+	m, err := h.parseURL(g.Request.RequestURI, "update")
+	if err == nil {
+		err = h.service.Save(g, m)
+	}
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+
+	g.Status(http.StatusOK)
+}
+
+// find обрабатывает GET-запросы для получения метрики по типу и имени из параметров URL.
+// Возвращает значение метрики в виде строки или статус ошибки при неудаче.
+func (h MetricsHandler) find(g *gin.Context) {
+	m, err := h.parseURL(g.Request.RequestURI, "value")
+	if err == nil {
+		m, err = h.service.Find(g, m)
+	}
+
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+
+	g.String(http.StatusOK, fmt.Sprintf("%v", h.getMetricValue(m)))
+}
+
+// findJSON обрабатывает POST-запросы для получения метрики из JSON-данных.
+// Возвращает метрику в формате JSON или статус ошибки при неудаче.
+func (h MetricsHandler) findJSON(g *gin.Context) {
+	rawData, err := g.GetRawData()
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+	metric, err := h.parseMetric(rawData)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+	m, err := h.service.Find(g, metric)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+
+	g.JSON(http.StatusOK, m)
+
+}
+
+// getAll обрабатывает GET-запросы для получения всех метрик.
+// Возвращает HTML-страницу со всеми метриками или статус ошибки при неудаче.
+func (h MetricsHandler) getAll(g *gin.Context) {
+	all, err := h.service.GetAll(g)
+	if err != nil {
+		_ = g.Error(err)
+		return
+	}
+	g.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"metrics": all,
+	})
+}
+
+// ping обрабатывает GET-запросы для проверки доступности хранилища метрик.
+// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+func (h MetricsHandler) ping(g *gin.Context) {
+	err := h.service.Ping(g)
+	if err != nil {
+		_ = g.Error(err)
+	}
+}
+
 func setupRouter(h *MetricsHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
