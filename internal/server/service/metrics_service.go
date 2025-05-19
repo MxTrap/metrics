@@ -59,7 +59,7 @@ func (*MetricsService) validateMetric(metricType string) bool {
 // Агрегирует метрики типа Counter и выполняет синхронное сохранение в файл, если saveInterval равен 0.
 // Возвращает ошибку при неудаче.
 func (s *MetricsService) SaveAll(ctx context.Context, metrics []commonmodels.Metric) error {
-	m := make(map[string]commonmodels.Metric)
+	m := make(map[string]commonmodels.Metric, len(metrics))
 	for _, metric := range metrics {
 		if !s.validateMetric(metric.MType) {
 			continue
