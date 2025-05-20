@@ -18,7 +18,7 @@ func NewDefaultConfig() HTTPConfig {
 	}
 }
 
-func (c HTTPConfig) String() string {
+func (c *HTTPConfig) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 

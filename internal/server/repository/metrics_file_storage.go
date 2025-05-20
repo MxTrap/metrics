@@ -1,9 +1,11 @@
+// Package repository предоставляет файловое хранилище для метрик.
+// Реализует MetricsFileStorage для сохранения, чтения и управления метриками в файле.
 package repository
 
 import (
 	"bufio"
 	"encoding/json"
-	common_models "github.com/MxTrap/metrics/internal/common/models"
+	commonmodels "github.com/MxTrap/metrics/internal/common/models"
 	"os"
 )
 
@@ -12,6 +14,9 @@ type MetricsFileStorage struct {
 	file     *os.File
 }
 
+// NewMetricsFileStorage создаёт новое файловое хранилище метрик по указанному пути.
+// Открывает файл с правами чтения и записи, создавая его при необходимости.
+// Возвращает указатель на инициализированный MetricsFileStorage или nil при ошибке.
 func NewMetricsFileStorage(filePath string) *MetricsFileStorage {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
@@ -23,7 +28,10 @@ func NewMetricsFileStorage(filePath string) *MetricsFileStorage {
 	}
 }
 
-func (s MetricsFileStorage) Save(metrics map[string]common_models.Metric) error {
+// Save сохраняет метрики в файл в формате JSON.
+// Очищает файл перед записью и записывает новые данные.
+// Возвращает ошибку при неудаче.
+func (s *MetricsFileStorage) Save(metrics map[string]commonmodels.Metric) error {
 	data, err := json.Marshal(metrics)
 
 	if err != nil {
@@ -45,7 +53,11 @@ func (s MetricsFileStorage) Save(metrics map[string]common_models.Metric) error 
 
 	return nil
 }
-func (s *MetricsFileStorage) Read() (map[string]common_models.Metric, error) {
+
+// Read считывает метрики из файла в формате JSON.
+// Возвращает карту метрик или пустую карту, если файл пуст.
+// Возвращает ошибку при неудаче десериализации.
+func (s *MetricsFileStorage) Read() (map[string]commonmodels.Metric, error) {
 
 	var data []byte
 	scanner := bufio.NewScanner(s.file)
@@ -55,9 +67,9 @@ func (s *MetricsFileStorage) Read() (map[string]common_models.Metric, error) {
 	}
 
 	if len(data) == 0 {
-		return map[string]common_models.Metric{}, nil
+		return map[string]commonmodels.Metric{}, nil
 	}
-	var res map[string]common_models.Metric
+	var res map[string]commonmodels.Metric
 	err := json.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
@@ -66,6 +78,8 @@ func (s *MetricsFileStorage) Read() (map[string]common_models.Metric, error) {
 	return res, nil
 }
 
+// Close закрывает файл хранилища.
+// Возвращает ошибку при неудаче закрытия.
 func (s *MetricsFileStorage) Close() error {
 	err := s.file.Close()
 	if err != nil {

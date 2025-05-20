@@ -8,8 +8,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/MxTrap/metrics/internal/agent/service"
-	common_models "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/agent/models"
+	commonmodels "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/mailru/easyjson"
 	"io"
 	"net/http"
@@ -17,17 +17,21 @@ import (
 	"time"
 )
 
+type metricsObserver interface {
+	GetMetrics() models.Metrics
+}
+
 type HTTPClient struct {
 	serverURL      string
 	client         *http.Client
-	service        *service.MetricsObserverService
+	service        metricsObserver
 	reportInterval int
 	key            string
 	rateLimit      int
 }
 
 func NewHTTPClient(
-	service *service.MetricsObserverService,
+	service metricsObserver,
 	serverURL string,
 	reportInterval int,
 	key string,
@@ -61,36 +65,31 @@ func (c *HTTPClient) Run(ctx context.Context) {
 			}
 		}
 	}()
-	for i := 0; i < c.rateLimit; i++ {
-		wg.Add(1)
-		go func(i int) {
-			for {
-				select {
-				case <-ctx.Done():
-					close(resCh)
-					wg.Done()
-					return
-				case <-inCh:
-					err := c.sendMetrics(ctx)
-					if err != nil {
-						resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
+	go func() {
+		for i := 0; i < c.rateLimit; i++ {
+			wg.Add(1)
+			go func(i int) {
+				for {
+					select {
+					case <-ctx.Done():
+						wg.Done()
+						return
+					case <-inCh:
+						err := c.sendMetrics(ctx)
+						if err != nil {
+							resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
+						}
 					}
 				}
-			}
-		}(i)
-	}
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case err := <-resCh:
-				fmt.Println(err)
-			}
+			}(i)
+			wg.Wait()
+			close(resCh)
 		}
 	}()
 
-	wg.Wait()
+	for res := range resCh {
+		fmt.Println(res)
+	}
 	ticker.Stop()
 }
 
@@ -121,7 +120,7 @@ func (*HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (c *HTTPClient) postMetric(ctx context.Context, metric common_models.Metrics) error {
+func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics) error {
 	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
@@ -185,19 +184,19 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric common_models.Metric
 func (c *HTTPClient) sendMetrics(ctx context.Context) error {
 	metrics := c.service.GetMetrics()
 
-	m := make([]common_models.Metric, 20)
+	m := make([]commonmodels.Metric, 0, len(metrics.Gauge.Metrics)+1)
 
 	metrics.Gauge.Range(func(key string, value float64) {
-		m = append(m, common_models.Metric{
+		m = append(m, commonmodels.Metric{
 			ID:    key,
-			MType: common_models.Gauge,
+			MType: commonmodels.Gauge,
 			Value: &value,
 		})
 	})
 
-	m = append(m, common_models.Metric{
+	m = append(m, commonmodels.Metric{
 		ID:    "PollCount",
-		MType: common_models.Counter,
+		MType: commonmodels.Counter,
 		Delta: &metrics.Counter.PollCount,
 	})
 

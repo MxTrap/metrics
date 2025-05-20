@@ -1,3 +1,5 @@
+// Package service предоставляет сервис для управления метриками, включая их сохранение, получение и синхронизацию с хранилищем.
+// Реализует MetricsService, который взаимодействует с хранилищем метрик и файловой системой.
 package service
 
 import (
@@ -23,21 +25,23 @@ type Storage interface {
 	Ping(ctx context.Context) error
 }
 
-type FileStorage interface {
+type fileStorage interface {
 	Save(metrics map[string]commonmodels.Metric) error
 	Read() (map[string]commonmodels.Metric, error)
 	Close() error
 }
 
 type MetricsService struct {
-	fileStorage  FileStorage
+	fileStorage  fileStorage
 	storage      Storage
 	saveInterval int
 	restore      bool
 	ticker       *time.Ticker
 }
 
-func NewMetricsService(fileStorage FileStorage, storage Storage, saveInterval int, restore bool) *MetricsService {
+// NewMetricsService создаёт новый MetricsService с указанным файловым хранилищем, хранилищем, интервалом сохранения и флагом восстановления.
+// Возвращает указатель на инициализированный MetricsService.
+func NewMetricsService(fileStorage fileStorage, storage Storage, saveInterval int, restore bool) *MetricsService {
 	return &MetricsService{
 		fileStorage:  fileStorage,
 		storage:      storage,
@@ -46,13 +50,16 @@ func NewMetricsService(fileStorage FileStorage, storage Storage, saveInterval in
 	}
 }
 
-func (MetricsService) validateMetric(metricType string) bool {
+func (*MetricsService) validateMetric(metricType string) bool {
 	_, ok := models.MetricTypes[metricType]
 	return ok
 }
 
+// SaveAll сохраняет массив метрик в хранилище.
+// Агрегирует метрики типа Counter и выполняет синхронное сохранение в файл, если saveInterval равен 0.
+// Возвращает ошибку при неудаче.
 func (s *MetricsService) SaveAll(ctx context.Context, metrics []commonmodels.Metric) error {
-	m := make(map[string]commonmodels.Metric)
+	m := make(map[string]commonmodels.Metric, len(metrics))
 	for _, metric := range metrics {
 		if !s.validateMetric(metric.MType) {
 			continue
@@ -77,6 +84,9 @@ func (s *MetricsService) SaveAll(ctx context.Context, metrics []commonmodels.Met
 	return nil
 }
 
+// Save сохраняет одну метрику в хранилище.
+// Выполняет синхронное сохранение в файл, если saveInterval равен 0.
+// Возвращает ошибку при неверном типе метрики, отсутствии значения или неудаче сохранения.
 func (s *MetricsService) Save(ctx context.Context, metric commonmodels.Metric) error {
 	if !s.validateMetric(metric.MType) {
 		return models.ErrUnknownMetricType
@@ -98,6 +108,9 @@ func (s *MetricsService) Save(ctx context.Context, metric commonmodels.Metric) e
 	}
 	return nil
 }
+
+// Find получает метрику по её идентификатору и типу.
+// Возвращает метрику или ошибку при неверном типе или отсутствии метрики.
 func (s *MetricsService) Find(ctx context.Context, metric commonmodels.Metric) (commonmodels.Metric, error) {
 	if !s.validateMetric(metric.MType) {
 		return commonmodels.Metric{}, models.ErrUnknownMetricType
@@ -110,6 +123,9 @@ func (s *MetricsService) Find(ctx context.Context, metric commonmodels.Metric) (
 
 	return val, nil
 }
+
+// GetAll возвращает все метрики из хранилища в виде карты с их значениями.
+// Возвращает карту или ошибку при неудаче.
 func (s *MetricsService) GetAll(ctx context.Context) (map[string]any, error) {
 	dst := map[string]any{}
 	metrics, err := s.storage.GetAll(ctx)
@@ -140,10 +156,15 @@ func (s *MetricsService) saveToFile(ctx context.Context) error {
 	}
 	return nil
 }
+
+// Ping проверяет доступность хранилища.
+// Возвращает ошибку, если хранилище недоступно.
 func (s *MetricsService) Ping(ctx context.Context) error {
 	return s.storage.Ping(ctx)
 }
 
+// Start запускает сервис, восстанавливая метрики из файла, если restore=true, и начиная периодическое сохранение, если saveInterval>0.
+// Возвращает ошибку при неудаче восстановления или сохранения.
 func (s *MetricsService) Start(ctx context.Context) error {
 	if s.restore {
 		read, err := s.fileStorage.Read()
@@ -175,6 +196,7 @@ func (s *MetricsService) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop останавливает периодическое сохранение, сохраняет метрики в файл и закрывает файловое хранилище.
 func (s *MetricsService) Stop() {
 	s.ticker.Stop()
 	err := s.saveToFile(context.Background())
