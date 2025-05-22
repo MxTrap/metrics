@@ -98,7 +98,7 @@ func (*HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 
 	gz, err := gzip.NewWriterLevel(&b, gzip.BestSpeed)
 	defer func(gz *gzip.Writer) {
-		err := gz.Close()
+		err = gz.Close()
 		if err != nil {
 			fmt.Println("failed to close gzip writer")
 		}
@@ -145,7 +145,8 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 
 	if c.key != "" {
 		h := hmac.New(sha256.New, []byte(c.key))
-		cBody, err := req.GetBody()
+		var cBody io.ReadCloser
+		cBody, err = req.GetBody()
 		if err != nil {
 			return err
 		}
@@ -163,7 +164,7 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 	for i := 0; i <= maxRetryAmount; i++ {
 		response, err = c.client.Do(req)
 		if err == nil {
-			err := response.Body.Close()
+			err = response.Body.Close()
 			if err != nil {
 				return err
 			}

@@ -80,7 +80,6 @@ func TestLoggerMiddleware(t *testing.T) {
 
 			assert.Equal(t, tt.responseStatus, w.Code, "Status code should match")
 			assert.Equal(t, tt.responseBody, w.Body.String(), "Response body should match")
-
 		})
 	}
 }

@@ -58,7 +58,6 @@ func (s *MetricsFileStorage) Save(metrics map[string]commonmodels.Metric) error 
 // Возвращает карту метрик или пустую карту, если файл пуст.
 // Возвращает ошибку при неудаче десериализации.
 func (s *MetricsFileStorage) Read() (map[string]commonmodels.Metric, error) {
-
 	var data []byte
 	scanner := bufio.NewScanner(s.file)
 

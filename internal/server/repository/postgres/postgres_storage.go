@@ -104,9 +104,9 @@ func (s *Storage) Save(ctx context.Context, metric models.Metric) error {
 			return err
 		}
 		if exec.RowsAffected() == 0 {
-			_, err := tx.Exec(ctx, insertStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
+			_, err = tx.Exec(ctx, insertStmt, metric.MType, metric.ID, metric.Value, metric.Delta)
 			if err != nil {
-				err := tx.Rollback(ctx)
+				err = tx.Rollback(ctx)
 				if err != nil {
 					return err
 				}
@@ -209,7 +209,8 @@ func (s *Storage) SaveAll(ctx context.Context, metrics map[string]models.Metric)
 		insertRows := make([]models.Metric, 0, len(metrics))
 
 		for _, metric := range metrics {
-			row, err := batchResult.Exec()
+			var row pgconn.CommandTag
+			row, err = batchResult.Exec()
 			if err != nil {
 				insertRows = append(insertRows, metric)
 			}
@@ -233,7 +234,7 @@ func (s *Storage) SaveAll(ctx context.Context, metrics map[string]models.Metric)
 			batchResult = tx.SendBatch(ctx, &insertBatch)
 
 			for range insertRows {
-				_, err := batchResult.Exec()
+				_, err = batchResult.Exec()
 				if err != nil {
 					err = tx.Rollback(ctx)
 					if err != nil {
@@ -242,11 +243,10 @@ func (s *Storage) SaveAll(ctx context.Context, metrics map[string]models.Metric)
 					return err
 				}
 			}
-			err := batchResult.Close()
+			err = batchResult.Close()
 			if err != nil {
 				return err
 			}
-
 		}
 
 		err = tx.Commit(ctx)

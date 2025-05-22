@@ -25,7 +25,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.ListenAndServe(":8081", nil)
+	err = http.ListenAndServe(":8081", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -33,5 +36,4 @@ func main() {
 	<-stop
 
 	cancel()
-
 }

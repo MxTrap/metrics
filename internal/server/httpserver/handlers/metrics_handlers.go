@@ -226,7 +226,6 @@ func (h MetricsHandler) findJSON(g *gin.Context) {
 	}
 
 	g.JSON(http.StatusOK, m)
-
 }
 
 // getAll обрабатывает GET-запросы для получения всех метрик.

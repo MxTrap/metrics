@@ -39,8 +39,18 @@ func NewMigrator(pool *pgxpool.Pool) (*Migrator, error) {
 }
 
 func (m *Migrator) InitializeDB() error {
-	defer m.db.Close()
-	defer m.migrator.Close()
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			fmt.Println("failed to close db")
+		}
+	}(m.db)
+	defer func(migrator *migrate.Migrate) {
+		err, _ := migrator.Close()
+		if err != nil {
+			fmt.Println("failed to close migrator")
+		}
+	}(m.migrator)
 
 	if err := m.migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
