@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/pgx"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -17,7 +16,7 @@ type Migrator struct {
 	db       *sql.DB
 }
 
-func NewMigrator(pool *pgxpool.Pool) (*Migrator, error) {
+func NewMigrator(pool *pgxpool.Pool, migrationsPath string) (*Migrator, error) {
 	db := stdlib.OpenDBFromPool(pool)
 
 	driver, err := pgx.WithInstance(db, &pgx.Config{})
@@ -25,7 +24,7 @@ func NewMigrator(pool *pgxpool.Pool) (*Migrator, error) {
 		return nil, err
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", utils.GetProjectPath()+"/migrations"),
+		fmt.Sprintf("file://%s", migrationsPath),
 		"postgres", driver)
 
 	if err != nil {

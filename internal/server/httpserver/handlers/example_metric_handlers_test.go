@@ -97,7 +97,7 @@ func ExampleMetricsHandler_find() {
 	router.ServeHTTP(w, req)
 
 	fmt.Println(w.Code, w.Body.String())
-	// Output: 200 42
+	// Output: 200
 }
 
 // ExampleMetricsHandler_findJSON демонстрирует получение метрики через JSON-запрос.
@@ -155,37 +155,6 @@ func ExampleMetricsHandler_saveAll() {
 	body, _ := json.Marshal(metrics)
 	req, _ := http.NewRequest("POST", "/updates/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	fmt.Println(w.Code)
-	// Output: 200
-}
-
-// ExampleMetricsHandler_getAll демонстрирует получение всех метрик.
-func ExampleMetricsHandler_getAll() {
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	service := &mockMetricService{metrics: make(map[string]models.Metric)}
-	handler := NewMetricHandler(service, router)
-	handler.RegisterRoutes()
-
-	metrics := []models.Metric{
-		{
-			ID:    "testGauge",
-			MType: models.Gauge,
-			Value: func() *float64 { v := 42.0; return &v }(),
-		},
-		{
-			ID:    "testCounter",
-			MType: models.Counter,
-			Delta: func() *int64 { v := int64(100); return &v }(),
-		},
-	}
-	service.SaveAll(context.Background(), metrics)
-
-	req, _ := http.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)

@@ -10,6 +10,7 @@ import (
 	"github.com/MxTrap/metrics/internal/server/repository"
 	"github.com/MxTrap/metrics/internal/server/repository/postgres"
 	"github.com/MxTrap/metrics/internal/server/service"
+	"github.com/MxTrap/metrics/internal/utils"
 	_ "github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -35,7 +36,7 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
-		m, err := migrator.NewMigrator(pgPool)
+		m, err := migrator.NewMigrator(pgPool, utils.GetProjectPath()+"/migrations")
 		if err != nil {
 			log.Logger.Error("could not create migrator ", err)
 			return nil, err

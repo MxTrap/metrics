@@ -21,7 +21,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			switch x := node.(type) {
 			case *ast.SelectorExpr:
 				if x.Sel.Name == "Exit" {
-					pass.Reportf(x.Pos(), "os.Exit direct call in main function")
+					if ident, ok := x.X.(*ast.Ident); ok && ident.Name == "os" {
+						pass.Reportf(x.Pos(), "os.Exit direct call in main function")
+					}
 				}
 			case *ast.FuncDecl:
 				if x.Name.Name != "main" {
