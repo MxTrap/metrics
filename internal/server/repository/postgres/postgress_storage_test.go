@@ -118,6 +118,7 @@ func setupStorage() (*Storage, cleanupFn, error) {
 
 func TestNewPostgresStorage(t *testing.T) {
 	pool, cleanup, err := createPool()
+	require.NoError(t, err, "failed to create pool")
 	defer cleanup(context.Background())
 
 	log := logger.NewLogger()

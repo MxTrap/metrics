@@ -68,8 +68,9 @@ func TestStop(t *testing.T) {
 	err := server.Stop(ctx)
 	assert.NoError(t, err, "server should stop without error")
 
-	_, err = http.Get("http://localhost:" + fmt.Sprint(server.server.Addr[strings.Index(server.server.Addr, ":")+1:]) + "/test")
+	resp, err := http.Get("http://localhost:" + fmt.Sprint(server.server.Addr[strings.Index(server.server.Addr, ":")+1:]) + "/test")
 	assert.Error(t, err, "request to stopped server should fail")
+	defer resp.Body.Close()
 }
 
 func TestNewRouterInvalidTemplatesPath(t *testing.T) {
