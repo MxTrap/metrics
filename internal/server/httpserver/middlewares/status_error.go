@@ -29,6 +29,5 @@ func StatusErrorMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
-
 	}
 }

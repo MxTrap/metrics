@@ -31,7 +31,6 @@ type writer struct {
 }
 
 func (w writer) Write(b []byte) (int, error) {
-
 	contentTypes := []string{
 		"application/json; charset=utf-8",
 		"text/html; charset=utf-8",
@@ -52,7 +51,7 @@ func AcceptEncodingMiddleware() gin.HandlerFunc {
 
 		gz, err := gzip.NewWriterLevel(c.Writer, gzip.BestSpeed)
 		defer func(gz *gzip.Writer) {
-			err := gz.Close()
+			err = gz.Close()
 			if err != nil {
 				_ = c.Error(err)
 			}
