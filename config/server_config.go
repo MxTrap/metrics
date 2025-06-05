@@ -13,6 +13,7 @@ type ServerConfig struct {
 	Restore         bool       `env:"RESTORE"`
 	DatabaseDSN     string     `env:"DATABASE_DSN"`
 	Key             string     `env:"KEY"`
+	CryptoKey       string     `env:"CRYPTO_KEY"`
 }
 
 func NewServerConfig() (*ServerConfig, error) {
@@ -20,6 +21,7 @@ func NewServerConfig() (*ServerConfig, error) {
 	sPath := flag.String("f", "./temp.txt", "path to file")
 	restore := flag.Bool("r", false, "restore data")
 	key := flag.String("k", "", "secret key")
+	cryptoKey := flag.String("crypto-key", "", "secret key")
 	//postgres://postgres:admin@localhost:5432/metrics?sslmode=disable
 	databaseDSN := flag.String("d", "", "database DSN")
 	httpConfig := NewDefaultConfig()
@@ -33,6 +35,7 @@ func NewServerConfig() (*ServerConfig, error) {
 		Restore:         *restore,
 		DatabaseDSN:     *databaseDSN,
 		Key:             *key,
+		CryptoKey:       *cryptoKey,
 	}
 
 	err := env.ParseWithFuncs(cfg, map[reflect.Type]env.ParserFunc{
