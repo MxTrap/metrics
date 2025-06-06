@@ -20,7 +20,8 @@ func NewAgentConfig() (*AgentConfig, error) {
 	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
 	key := flag.String("k", "", "secret key")
 	rateLimit := flag.Int("l", 1, "rate limit")
-	cryptoKey := flag.String("crypto-key", "", "crypto key")
+	// /home/mxtrap/GolandProjects/metrics/keys/public.pem
+	cryptoKey := flag.String("crypto-key", "/home/mxtrap/GolandProjects/metrics/keys/public.pem", "crypto key")
 	httpConfig := NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()

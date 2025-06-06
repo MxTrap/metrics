@@ -21,6 +21,10 @@ type metricsObserver interface {
 	GetMetrics() models.Metrics
 }
 
+type encrypter interface {
+	Encrypt(plaintext []byte) ([]byte, error)
+}
+
 type HTTPClient struct {
 	serverURL      string
 	client         *http.Client
@@ -28,6 +32,7 @@ type HTTPClient struct {
 	reportInterval int
 	key            string
 	rateLimit      int
+	encrypter      encrypter
 }
 
 func NewHTTPClient(
@@ -47,6 +52,10 @@ func NewHTTPClient(
 		key:            key,
 		rateLimit:      rateLimit,
 	}
+}
+
+func (c *HTTPClient) RegisterEncrypter(e encrypter) {
+	c.encrypter = e
 }
 
 func (c *HTTPClient) Run(ctx context.Context) {
@@ -127,10 +136,19 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 		return err
 	}
 
+	if c.encrypter != nil {
+		body, err = c.encrypter.Encrypt(body)
+		if err != nil {
+			return err
+		}
+	}
+
 	compressed, err := c.compress(body)
+
 	if err != nil {
 		return err
 	}
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,

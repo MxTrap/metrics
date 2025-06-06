@@ -21,7 +21,8 @@ func NewServerConfig() (*ServerConfig, error) {
 	sPath := flag.String("f", "./temp.txt", "path to file")
 	restore := flag.Bool("r", false, "restore data")
 	key := flag.String("k", "", "secret key")
-	cryptoKey := flag.String("crypto-key", "", "secret key")
+	// /home/mxtrap/GolandProjects/metrics/keys/private.pem
+	cryptoKey := flag.String("crypto-key", "/home/mxtrap/GolandProjects/metrics/keys/private.pem", "secret key")
 	//postgres://postgres:admin@localhost:5432/metrics?sslmode=disable
 	databaseDSN := flag.String("d", "", "database DSN")
 	httpConfig := NewDefaultConfig()
