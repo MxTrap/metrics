@@ -5,6 +5,9 @@ import (
 	"github.com/MxTrap/metrics/config"
 	"github.com/MxTrap/metrics/internal/server/app"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -46,5 +49,10 @@ func main() {
 		log.Fatal("Application run failed: ", err)
 	}
 
-	defer application.Shutdown()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	<-stop
+
+	application.Shutdown()
 }
