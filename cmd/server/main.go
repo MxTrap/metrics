@@ -54,5 +54,5 @@ func main() {
 
 	<-stop
 
-	application.Shutdown()
+	application.GracefulShutdown()
 }

@@ -82,7 +82,7 @@ func (a App) Run() error {
 	return nil
 }
 
-func (a App) Shutdown() {
+func (a App) GracefulShutdown() {
 	a.logger.Logger.Info("shutting down server")
 	a.metricsService.Stop()
 	err := a.httpServer.Stop(a.ctx)

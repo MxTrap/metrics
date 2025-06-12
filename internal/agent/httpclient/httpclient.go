@@ -61,7 +61,7 @@ func (c *HTTPClient) RegisterEncrypter(e encrypter) {
 func (c *HTTPClient) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * time.Duration(c.reportInterval))
 	inCh := make(chan struct{})
-	resCh := make(chan error)
+	errCh := make(chan error)
 	wg := &sync.WaitGroup{}
 	go func() {
 		for {
@@ -86,17 +86,17 @@ func (c *HTTPClient) Run(ctx context.Context) {
 					case <-inCh:
 						err := c.sendMetrics(ctx)
 						if err != nil {
-							resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
+							errCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
 						}
 					}
 				}
 			}(i)
 			wg.Wait()
-			close(resCh)
+			close(errCh)
 		}
 	}()
 
-	for res := range resCh {
+	for res := range errCh {
 		fmt.Println(res)
 	}
 	ticker.Stop()
