@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"github.com/MxTrap/metrics/config"
+	"github.com/MxTrap/metrics/config/serverconfig"
 	"github.com/MxTrap/metrics/internal/server/app"
+	"github.com/MxTrap/metrics/internal/utils"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -13,26 +16,10 @@ var (
 	BuildVersion string
 )
 
-func formatFlagValue(val string) string {
-	if val == "" {
-		return "N/A"
-	}
-	return val
-}
-
-func printBuildFlags() {
-	fmt.Printf(
-		"Build version: %s\nBuild date: %s\nBuild commit: %s\n",
-		formatFlagValue(BuildVersion),
-		formatFlagValue(BuildDate),
-		formatFlagValue(BuildCommit),
-	)
-}
-
 func main() {
-	printBuildFlags()
+	utils.PrintBuildFlags(BuildDate, BuildCommit, BuildVersion)
 
-	cfg, err := config.NewServerConfig()
+	cfg, err := serverconfig.NewServerConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,5 +33,10 @@ func main() {
 		log.Fatal("Application run failed: ", err)
 	}
 
-	defer application.Shutdown()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	<-stop
+
+	application.GracefulShutdown()
 }

@@ -31,7 +31,7 @@ func TestNewRouter(t *testing.T) {
 	log := &mockLogger{}
 	key := "testkey"
 
-	server := NewRouter(cfg, log, key)
+	server := NewRouter(cfg, log, key, "")
 	require.NotNil(t, server, "server should not be nil")
 	assert.NotNil(t, server.Router, "router should not be nil")
 	assert.NotNil(t, server.server, "http server should not be nil")
@@ -55,7 +55,7 @@ func TestStop(t *testing.T) {
 	log := &mockLogger{}
 	key := "testkey"
 
-	server := NewRouter(cfg, log, key)
+	server := NewRouter(cfg, log, key, "")
 
 	go func() {
 		_ = server.Run()
@@ -70,7 +70,9 @@ func TestStop(t *testing.T) {
 
 	resp, err := http.Get("http://localhost:" + fmt.Sprint(server.server.Addr[strings.Index(server.server.Addr, ":")+1:]) + "/test")
 	assert.Error(t, err, "request to stopped server should fail")
-	defer resp.Body.Close()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
 }
 
 func TestNewRouterInvalidTemplatesPath(t *testing.T) {
@@ -81,7 +83,7 @@ func TestNewRouterInvalidTemplatesPath(t *testing.T) {
 	log := &mockLogger{}
 	key := "testkey"
 
-	server := NewRouter(cfg, log, key)
+	server := NewRouter(cfg, log, key, "")
 	assert.NotNil(t, server, "server should be created even with invalid templates path")
 
 	server.Router.GET("/test", func(c *gin.Context) {

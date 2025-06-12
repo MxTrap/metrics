@@ -21,6 +21,10 @@ type metricsObserver interface {
 	GetMetrics() models.Metrics
 }
 
+type encrypter interface {
+	Encrypt(plaintext []byte) ([]byte, error)
+}
+
 type HTTPClient struct {
 	serverURL      string
 	client         *http.Client
@@ -28,6 +32,7 @@ type HTTPClient struct {
 	reportInterval int
 	key            string
 	rateLimit      int
+	encrypter      encrypter
 }
 
 func NewHTTPClient(
@@ -49,10 +54,14 @@ func NewHTTPClient(
 	}
 }
 
+func (c *HTTPClient) RegisterEncrypter(e encrypter) {
+	c.encrypter = e
+}
+
 func (c *HTTPClient) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * time.Duration(c.reportInterval))
 	inCh := make(chan struct{})
-	resCh := make(chan error)
+	errCh := make(chan error)
 	wg := &sync.WaitGroup{}
 	go func() {
 		for {
@@ -77,17 +86,17 @@ func (c *HTTPClient) Run(ctx context.Context) {
 					case <-inCh:
 						err := c.sendMetrics(ctx)
 						if err != nil {
-							resCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
+							errCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
 						}
 					}
 				}
 			}(i)
 			wg.Wait()
-			close(resCh)
+			close(errCh)
 		}
 	}()
 
-	for res := range resCh {
+	for res := range errCh {
 		fmt.Println(res)
 	}
 	ticker.Stop()
@@ -127,10 +136,19 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 		return err
 	}
 
+	if c.encrypter != nil {
+		body, err = c.encrypter.Encrypt(body)
+		if err != nil {
+			return err
+		}
+	}
+
 	compressed, err := c.compress(body)
+
 	if err != nil {
 		return err
 	}
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
