@@ -1,9 +1,9 @@
-package config
+package serverconfig
 
 import (
 	"encoding/json"
 	"flag"
-	"github.com/MxTrap/metrics/internal/utils"
+	"github.com/MxTrap/metrics/config"
 	"github.com/caarlos0/env/v11"
 	"os"
 	"reflect"
@@ -11,13 +11,13 @@ import (
 )
 
 type ServerConfig struct {
-	HTTP            HTTPConfig `env:"ADDRESS"`
-	StoreInterval   int        `env:"STORE_INTERVAL"`
-	FileStoragePath string     `env:"FILE_STORAGE_PATH"`
-	Restore         bool       `env:"RESTORE"`
-	DatabaseDSN     string     `env:"DATABASE_DSN"`
-	Key             string     `env:"KEY"`
-	CryptoKey       string     `env:"CRYPTO_KEY"`
+	HTTP            config.HTTPConfig `env:"ADDRESS"`
+	StoreInterval   int               `env:"STORE_INTERVAL"`
+	FileStoragePath string            `env:"FILE_STORAGE_PATH"`
+	Restore         bool              `env:"RESTORE"`
+	DatabaseDSN     string            `env:"DATABASE_DSN"`
+	Key             string            `env:"KEY"`
+	CryptoKey       string            `env:"CRYPTO_KEY"`
 }
 
 func NewServerConfig() (*ServerConfig, error) {
@@ -42,9 +42,9 @@ func (cfg *ServerConfig) parseFromFlags() {
 	sPath := flag.String("f", "./temp.txt", "path to file")
 	restore := flag.Bool("r", false, "restore data")
 	key := flag.String("k", "", "secret key")
-	cryptoKey := flag.String("crypto-key", utils.GetProjectPath()+"/keys/private.pem", "secret key")
+	cryptoKey := flag.String("crypto-key", "", "secret key")
 	databaseDSN := flag.String("d", "", "database DSN")
-	httpConfig := NewDefaultConfig()
+	httpConfig := config.NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
 
@@ -60,8 +60,8 @@ func (cfg *ServerConfig) parseFromFlags() {
 func (cfg *ServerConfig) parseFromEnv() error {
 	return env.ParseWithOptions(cfg, env.Options{
 		FuncMap: map[reflect.Type]env.ParserFunc{
-			reflect.TypeOf(HTTPConfig{}): func(v string) (interface{}, error) {
-				httpConfig := HTTPConfig{}
+			reflect.TypeOf(config.HTTPConfig{}): func(v string) (interface{}, error) {
+				httpConfig := config.HTTPConfig{}
 				err := httpConfig.Set(v)
 				if err != nil {
 					return nil, err
@@ -73,10 +73,10 @@ func (cfg *ServerConfig) parseFromEnv() error {
 }
 
 func (cfg *ServerConfig) parseFromFile() error {
-	cfgPath := flag.String("c", utils.GetProjectPath()+"/config/server_config.json", "path to config file")
+	cfgPath := flag.String("c", "", "path to config file")
 
 	type path struct {
-		Path string `env:"Config"`
+		Path string `env:"CONFIG"`
 	}
 	envPath, err := env.ParseAs[path]()
 	if err != nil {
@@ -108,7 +108,7 @@ func (cfg *ServerConfig) parseFromFile() error {
 	}
 
 	if tmp.Address != "" {
-		httpConfig := NewDefaultConfig()
+		httpConfig := config.NewDefaultConfig()
 		err = httpConfig.Set(tmp.Address)
 		if err != nil {
 			return err

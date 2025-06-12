@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"github.com/MxTrap/metrics/config"
+	"github.com/MxTrap/metrics/config/serverconfig"
 	"github.com/MxTrap/metrics/internal/server/httpserver"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
 	"github.com/MxTrap/metrics/internal/server/logger"
@@ -23,7 +23,7 @@ type App struct {
 	logger         *logger.Logger
 }
 
-func NewApp(cfg *config.ServerConfig) (*App, error) {
+func NewApp(cfg *serverconfig.ServerConfig) (*App, error) {
 	ctx := context.Background()
 	log := logger.NewLogger()
 

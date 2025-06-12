@@ -9,36 +9,45 @@ import (
 	"os"
 )
 
-func main() {
+// generateKeyPair генерирует пару RSA-ключей.
+func generateKeyPair(bits int) (*rsa.PrivateKey, *rsa.PublicKey, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
+	if err != nil {
+		return nil, nil, err
+	}
+	return privateKey, &privateKey.PublicKey, nil
+}
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 16384)
+// saveKeyToFile сохраняет ключ в PEM-файл.
+func saveKeyToFile(filename string, block *pem.Block) error {
+	if err := os.MkdirAll("keys", 0755); err != nil {
+		return err
+	}
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Fatal(closeErr)
+		}
+	}()
+	return pem.Encode(file, block)
+}
+
+func main() {
+	privateKey, publicKey, err := generateKeyPair(16384)
 	if err != nil {
 		log.Fatal(err)
 	}
-	publicKey := &privateKey.PublicKey
 
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 	privateKeyBlock := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: privateKeyBytes,
 	}
-	err = os.MkdirAll("keys", 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
-	privatePem, err := os.Create("./keys/private.pem")
-	defer func(privatePem *os.File) {
-		err := privatePem.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(privatePem)
-	if err != nil {
-		log.Fatal("error when create private.pem: " + err.Error())
-	}
-	err = pem.Encode(privatePem, privateKeyBlock)
-	if err != nil {
-		log.Fatal("error when encode private pem: " + err.Error())
+	if err := saveKeyToFile("./keys/private.pem", privateKeyBlock); err != nil {
+		log.Fatal("error when saving private key: " + err.Error())
 	}
 
 	publicKeyBytes := x509.MarshalPKCS1PublicKey(publicKey)
@@ -46,18 +55,7 @@ func main() {
 		Type:  "PUBLIC KEY",
 		Bytes: publicKeyBytes,
 	}
-	publicPem, err := os.Create("./keys/public.pem")
-	defer func(publicPem *os.File) {
-		err := publicPem.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(publicPem)
-	if err != nil {
-		log.Fatal("error when create public.pem: " + err.Error())
-	}
-	err = pem.Encode(publicPem, publicKeyBlock)
-	if err != nil {
-		log.Fatal("error when encode public pem: " + err.Error())
+	if err := saveKeyToFile("./keys/public.pem", publicKeyBlock); err != nil {
+		log.Fatal("error when saving public key: " + err.Error())
 	}
 }

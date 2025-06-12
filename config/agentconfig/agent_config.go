@@ -1,9 +1,9 @@
-package config
+package agentconfig
 
 import (
 	"encoding/json"
 	"flag"
-	"github.com/MxTrap/metrics/internal/utils"
+	"github.com/MxTrap/metrics/config"
 	"github.com/caarlos0/env/v11"
 	"os"
 	"reflect"
@@ -11,23 +11,23 @@ import (
 )
 
 type AgentConfig struct {
-	ServerConfig   HTTPConfig `env:"ADDRESS"`
-	ReportInterval int        `env:"REPORT_INTERVAL"`
-	PollInterval   int        `env:"POLL_INTERVAL"`
-	Key            string     `env:"KEY"`
-	RateLimit      int        `env:"RATE_LIMIT"`
-	CryptoKey      string     `env:"CRYPTO_KEY"`
+	ServerConfig   config.HTTPConfig `env:"ADDRESS"`
+	ReportInterval int               `env:"REPORT_INTERVAL"`
+	PollInterval   int               `env:"POLL_INTERVAL"`
+	Key            string            `env:"KEY"`
+	RateLimit      int               `env:"RATE_LIMIT"`
+	CryptoKey      string            `env:"CRYPTO_KEY"`
 }
 
 func NewAgentConfig() (*AgentConfig, error) {
 	agentConfig := &AgentConfig{}
-	err := agentConfig.ParseFromFile()
+	err := agentConfig.parseFromFile()
 	if err != nil {
 		return nil, err
 	}
 
-	agentConfig.ParseFromFlags()
-	err = agentConfig.ParseFromEnv()
+	agentConfig.parseFromFlags()
+	err = agentConfig.parseFromEnv()
 	if err != nil {
 		return nil, err
 	}
@@ -35,13 +35,13 @@ func NewAgentConfig() (*AgentConfig, error) {
 	return agentConfig, nil
 }
 
-func (cfg *AgentConfig) ParseFromFlags() {
+func (cfg *AgentConfig) parseFromFlags() {
 	rInterval := flag.Int("r", 10, "interval of sending data to server")
 	pInterval := flag.Int("p", 2, "interval of data collecting from runtime")
 	key := flag.String("k", "", "secret key")
 	rateLimit := flag.Int("l", 1, "rate limit")
-	cryptoKey := flag.String("crypto-key", utils.GetProjectPath()+"/keys/public.pem", "crypto key")
-	httpConfig := NewDefaultConfig()
+	cryptoKey := flag.String("crypto-key", "", "crypto key")
+	httpConfig := config.NewDefaultConfig()
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
 
@@ -54,11 +54,11 @@ func (cfg *AgentConfig) ParseFromFlags() {
 
 }
 
-func (cfg *AgentConfig) ParseFromEnv() error {
+func (cfg *AgentConfig) parseFromEnv() error {
 	return env.ParseWithOptions(cfg, env.Options{
 		FuncMap: map[reflect.Type]env.ParserFunc{
-			reflect.TypeOf(HTTPConfig{}): func(v string) (interface{}, error) {
-				httpConfig := HTTPConfig{}
+			reflect.TypeOf(config.HTTPConfig{}): func(v string) (interface{}, error) {
+				httpConfig := config.HTTPConfig{}
 				err := httpConfig.Set(v)
 				if err != nil {
 					return nil, err
@@ -69,11 +69,11 @@ func (cfg *AgentConfig) ParseFromEnv() error {
 	})
 }
 
-func (cfg *AgentConfig) ParseFromFile() error {
-	cfgPath := flag.String("c", utils.GetProjectPath()+"/config/agent_config.json", "path to config file")
+func (cfg *AgentConfig) parseFromFile() error {
+	cfgPath := flag.String("c", "", "path to config file")
 
 	type path struct {
-		Path string `env:"Config"`
+		Path string `env:"CONFIG"`
 	}
 	envPath, err := env.ParseAs[path]()
 	if err != nil {
@@ -105,7 +105,7 @@ func (cfg *AgentConfig) ParseFromFile() error {
 	}
 
 	if tmp.Address != "" {
-		httpConfig := NewDefaultConfig()
+		httpConfig := config.NewDefaultConfig()
 		err = httpConfig.Set(tmp.Address)
 		if err != nil {
 			return err
