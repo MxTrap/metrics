@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"github.com/MxTrap/metrics/config"
+	"github.com/MxTrap/metrics/config/serverconfig"
 	"github.com/MxTrap/metrics/internal/server/httpserver"
 	"github.com/MxTrap/metrics/internal/server/httpserver/handlers"
 	"github.com/MxTrap/metrics/internal/server/logger"
@@ -23,7 +23,7 @@ type App struct {
 	logger         *logger.Logger
 }
 
-func NewApp(cfg *config.ServerConfig) (*App, error) {
+func NewApp(cfg *serverconfig.ServerConfig) (*App, error) {
 	ctx := context.Background()
 	log := logger.NewLogger()
 
@@ -55,7 +55,7 @@ func NewApp(cfg *config.ServerConfig) (*App, error) {
 	}
 
 	metricsService := service.NewMetricsService(fileStorage, storage, cfg.StoreInterval, cfg.Restore)
-	httpRouter := httpserver.NewRouter(cfg.HTTP, log, cfg.Key)
+	httpRouter := httpserver.NewRouter(cfg.HTTP, log, cfg.Key, cfg.CryptoKey)
 	metricHandler := handlers.NewMetricHandler(metricsService, httpRouter.Router)
 	metricHandler.RegisterRoutes()
 
@@ -82,7 +82,7 @@ func (a App) Run() error {
 	return nil
 }
 
-func (a App) Shutdown() {
+func (a App) GracefulShutdown() {
 	a.logger.Logger.Info("shutting down server")
 	a.metricsService.Stop()
 	err := a.httpServer.Stop(a.ctx)

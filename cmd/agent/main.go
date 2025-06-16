@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/MxTrap/metrics/config"
+	"github.com/MxTrap/metrics/config/agentconfig"
 	"github.com/MxTrap/metrics/internal/agent/app"
+	"github.com/MxTrap/metrics/internal/utils"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -19,26 +19,10 @@ var (
 	BuildVersion string
 )
 
-func formatFlagValue(val string) string {
-	if val == "" {
-		return "N/A"
-	}
-	return val
-}
-
-func printBuildFlags() {
-	fmt.Printf(
-		"Build version: %s\nBuild date: %s\nBuild commit: %s\n",
-		formatFlagValue(BuildVersion),
-		formatFlagValue(BuildDate),
-		formatFlagValue(BuildCommit),
-	)
-}
-
 func main() {
-	printBuildFlags()
+	utils.PrintBuildFlags(BuildDate, BuildCommit, BuildVersion)
 
-	cfg, err := config.NewAgentConfig()
+	cfg, err := agentconfig.NewAgentConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	if err != nil {
@@ -56,7 +40,7 @@ func main() {
 	}
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	<-stop
 

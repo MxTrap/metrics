@@ -20,7 +20,7 @@ type logger interface {
 	LoggerMiddleware() gin.HandlerFunc
 }
 
-func NewRouter(cfg config.HTTPConfig, log logger, key string) *HTTPServer {
+func NewRouter(cfg config.HTTPConfig, log logger, key string, cryptoKey string) *HTTPServer {
 	router := gin.New()
 	router.Use(
 		log.LoggerMiddleware(),
@@ -31,6 +31,13 @@ func NewRouter(cfg config.HTTPConfig, log logger, key string) *HTTPServer {
 		middlewares.HashEncodeMiddleware(key),
 		middlewares.StatusErrorMiddleware(),
 	)
+	if cryptoKey != "" {
+		decrypter, err := middlewares.NewDecrypter(cryptoKey)
+		if err != nil {
+			panic(err)
+		}
+		router.Use(decrypter.DecrypterMiddleware())
+	}
 	router.HandleMethodNotAllowed = true
 	router.LoadHTMLGlob(utils.GetProjectPath() + "/internal/server/templates/*")
 
