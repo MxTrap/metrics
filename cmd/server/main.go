@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/MxTrap/metrics/config/serverconfig"
 	"github.com/MxTrap/metrics/internal/server/app"
 	"github.com/MxTrap/metrics/internal/utils"
@@ -23,6 +24,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(cfg)
 	application, err := app.NewApp(cfg)
 	if err != nil {
 		log.Fatal("Application initialization failed: ", err)

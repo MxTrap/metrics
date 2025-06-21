@@ -18,6 +18,7 @@ type ServerConfig struct {
 	DatabaseDSN     string            `env:"DATABASE_DSN"`
 	Key             string            `env:"KEY"`
 	CryptoKey       string            `env:"CRYPTO_KEY"`
+	TrustedSubnet   string            `env:"TRUSTED_SUBNET"`
 }
 
 func NewServerConfig() (*ServerConfig, error) {
@@ -45,6 +46,7 @@ func (cfg *ServerConfig) parseFromFlags() {
 	cryptoKey := flag.String("crypto-key", "", "secret key")
 	databaseDSN := flag.String("d", "", "database DSN")
 	httpConfig := config.NewDefaultConfig()
+	trustedSubnet := flag.String("t", "", "trusted subnet")
 	flag.Var(&httpConfig, "a", "server host:port")
 	flag.Parse()
 
@@ -55,6 +57,7 @@ func (cfg *ServerConfig) parseFromFlags() {
 	cfg.DatabaseDSN = *databaseDSN
 	cfg.Key = *key
 	cfg.CryptoKey = *cryptoKey
+	cfg.TrustedSubnet = *trustedSubnet
 }
 
 func (cfg *ServerConfig) parseFromEnv() error {
@@ -100,6 +103,7 @@ func (cfg *ServerConfig) parseFromFile() error {
 		StoreFile     string `json:"store_file"`
 		DatabaseDsn   string `json:"database_dsn"`
 		CryptoKey     string `json:"crypto_key"`
+		TrustedSubnet string `json:"trusted_subnet"`
 	}
 	tmp := tmpConfig{}
 	err = json.Unmarshal(fileBytes, &tmp)
@@ -128,6 +132,7 @@ func (cfg *ServerConfig) parseFromFile() error {
 	cfg.Restore = tmp.Restore
 	cfg.DatabaseDSN = tmp.DatabaseDsn
 	cfg.CryptoKey = tmp.CryptoKey
+	cfg.TrustedSubnet = tmp.TrustedSubnet
 
 	return nil
 }

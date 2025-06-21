@@ -20,11 +20,12 @@ type logger interface {
 	LoggerMiddleware() gin.HandlerFunc
 }
 
-func NewRouter(cfg config.HTTPConfig, log logger, key string, cryptoKey string) *HTTPServer {
+func NewRouter(cfg config.HTTPConfig, log logger, key string, cryptoKey string, cidr string) *HTTPServer {
 	router := gin.New()
 	router.Use(
 		log.LoggerMiddleware(),
 		gin.Recovery(),
+		middlewares.IpValidator(cidr),
 		middlewares.HashDecodeMiddleware(key),
 		middlewares.ContentEncodingMiddleware(),
 		middlewares.AcceptEncodingMiddleware(),

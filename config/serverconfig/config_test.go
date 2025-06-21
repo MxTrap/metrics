@@ -21,7 +21,7 @@ func TestNewServerConfig(t *testing.T) {
 	require.NoError(t, err, "failed to create temp dir")
 	defer os.RemoveAll(tempDir)
 
-	configFile := filepath.Join(tempDir, "server_config.json")
+	configFile := filepath.Join(tempDir, "config.json")
 	configContent := []byte(
 		`{
 		"address": "127.0.1:9090",
@@ -85,7 +85,7 @@ func TestParseFromFile(t *testing.T) {
 
 	defer os.RemoveAll(tempDir)
 
-	configFile := filepath.Join(tempDir, "server_config.json")
+	configFile := filepath.Join(tempDir, "config.json")
 	configContent := []byte(
 		`{
 			"address": "127.0.0.1:9090",

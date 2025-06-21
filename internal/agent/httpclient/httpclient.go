@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/MxTrap/metrics/internal/agent/models"
 	commonmodels "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/mailru/easyjson"
 	"io"
 	"net/http"
@@ -160,6 +161,7 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("X-Real-IP", utils.GetLocalIP())
 
 	if c.key != "" {
 		h := hmac.New(sha256.New, []byte(c.key))
