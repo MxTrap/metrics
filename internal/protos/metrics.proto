@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package protos;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "./";
+
+message Metric {
+  string id = 1;
+  string type = 2;
+  optional int64 delta = 3;
+  optional double value = 4;
+}
+
+message GetAllResponse {
+  google.protobuf.Struct metrics = 1;
+}
+
+message SaveAllRequest {
+  repeated Metric metrics = 1;
+}
+
+service MetricService {
+  rpc GetAll(google.protobuf.Empty) returns (GetAllResponse);
+  rpc SaveAll(SaveAllRequest) returns (google.protobuf.Empty);
+  rpc Find(Metric) returns (Metric);
+  rpc Save(Metric) returns (google.protobuf.Empty);
+}

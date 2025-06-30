@@ -1,4 +1,4 @@
-package httpclient
+package http
 
 import (
 	"compress/gzip"
@@ -20,14 +20,14 @@ type mockMetricsObserver struct {
 	mock.Mock
 }
 
-func (m *mockMetricsObserver) GetMetrics() models.Metrics {
+func (m *mockMetricsObserver) GetMetrics() commonmodels.Metrics {
 	args := m.Called()
-	return args.Get(0).(models.Metrics)
+	return args.Get(0).(commonmodels.Metrics)
 }
 
 func TestNewHTTPClient(t *testing.T) {
 	observer := &mockMetricsObserver{}
-	client := NewHTTPClient(observer, "localhost:8080", 2, "testkey", 1)
+	client := NewClient(observer, "localhost:8080", 2, "testkey", 1)
 
 	assert.NotNil(t, client, "client should not be nil")
 	assert.NotNil(t, client.client, "http client should not be nil")
@@ -75,10 +75,10 @@ func TestPostMetric(t *testing.T) {
 
 	key := "testkey"
 	observer := &mockMetricsObserver{}
-	client := NewHTTPClient(observer, server.URL[7:], 2, key, 1) // убираем "http://"
+	client := NewClient(observer, server.URL[7:], 2, key, 1) // убираем "http://"
 
 	ctx := context.Background()
-	err := client.postMetric(ctx, metrics)
+	err := client.postMetric(ctx)
 	require.NoError(t, err, "postMetric should succeed")
 
 }
@@ -96,10 +96,10 @@ func TestPostMetricWithRetries(t *testing.T) {
 	defer server.Close()
 
 	observer := &mockMetricsObserver{}
-	client := NewHTTPClient(observer, server.URL[7:], 2, "", 1)
+	client := NewClient(observer, server.URL[7:], 2, "", 1)
 	ctx := context.Background()
 
-	err := client.postMetric(ctx, []commonmodels.Metric{})
+	err := client.postMetric(ctx)
 	require.NoError(t, err, "postMetric should succeed after retries")
 }
 
@@ -138,10 +138,10 @@ func TestSendMetrics(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewHTTPClient(observer, server.URL[7:], 2, "", 1)
+	client := NewClient(observer, server.URL[7:], 2, "", 1)
 	ctx := context.Background()
 
-	err := client.sendMetrics(ctx)
+	err := client.postMetric(ctx)
 	require.NoError(t, err, "sendMetrics should succeed")
 	observer.AssertExpectations(t)
 }
@@ -163,7 +163,7 @@ func TestRun(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewHTTPClient(observer, server.URL[7:], 1, "", 1)
+	client := NewClient(observer, server.URL[7:], 1, "", 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 

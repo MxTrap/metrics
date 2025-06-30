@@ -1,4 +1,4 @@
-package httpclient
+package http
 
 import (
 	"bytes"
@@ -8,9 +8,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/MxTrap/metrics/internal/agent/models"
-	commonmodels "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/utils"
+
 	"github.com/mailru/easyjson"
 	"io"
 	"net/http"
@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-type metricsObserver interface {
+type metricsGetter interface {
 	GetMetrics() models.Metrics
 }
 
@@ -29,15 +29,15 @@ type encrypter interface {
 type HTTPClient struct {
 	serverURL      string
 	client         *http.Client
-	service        metricsObserver
+	service        metricsGetter
 	reportInterval int
 	key            string
 	rateLimit      int
 	encrypter      encrypter
 }
 
-func NewHTTPClient(
-	service metricsObserver,
+func NewClient(
+	service metricsGetter,
 	serverURL string,
 	reportInterval int,
 	key string,
@@ -85,7 +85,7 @@ func (c *HTTPClient) Run(ctx context.Context) {
 						wg.Done()
 						return
 					case <-inCh:
-						err := c.sendMetrics(ctx)
+						err := c.postMetric(ctx)
 						if err != nil {
 							errCh <- fmt.Errorf("error from gorutine %d: %w", i, err)
 						}
@@ -130,7 +130,8 @@ func (*HTTPClient) compress(data []byte) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics) error {
+func (c *HTTPClient) postMetric(ctx context.Context) error {
+	metric := c.service.GetMetrics()
 	body, err := easyjson.Marshal(metric)
 
 	if err != nil {
@@ -179,51 +180,20 @@ func (c *HTTPClient) postMetric(ctx context.Context, metric commonmodels.Metrics
 		req.Header.Set("HashSHA256", hex.EncodeToString(dst))
 	}
 
-	const maxRetryAmount = 3
-	var response *http.Response
-	for i := 0; i <= maxRetryAmount; i++ {
-		response, err = c.client.Do(req)
-		if err == nil {
-			err = response.Body.Close()
-			if err != nil {
-				return err
-			}
-			break
+	err = utils.Retry(func() error {
+		response, err := c.client.Do(req)
+		if err != nil {
+			return err
 		}
-		if i < maxRetryAmount {
-			time.Sleep(time.Duration(1+2*i) * time.Second)
+		err = response.Body.Close()
+		if err != nil {
+			return err
 		}
-	}
-
+		return nil
+	}, 3)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (c *HTTPClient) sendMetrics(ctx context.Context) error {
-	metrics := c.service.GetMetrics()
-
-	m := make([]commonmodels.Metric, 0, len(metrics.Gauge.Metrics)+1)
-
-	metrics.Gauge.Range(func(key string, value float64) {
-		m = append(m, commonmodels.Metric{
-			ID:    key,
-			MType: commonmodels.Gauge,
-			Value: &value,
-		})
-	})
-
-	m = append(m, commonmodels.Metric{
-		ID:    "PollCount",
-		MType: commonmodels.Counter,
-		Delta: &metrics.Counter.PollCount,
-	})
-
-	err := c.postMetric(ctx, m)
-	if err != nil {
-		return err
-	}
 	return nil
 }

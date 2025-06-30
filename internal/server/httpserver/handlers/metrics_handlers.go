@@ -1,4 +1,4 @@
-// Package handlers предоставляет HTTP-обработчики для управления метриками с использованием фреймворка Gin.
+// Package handlers предоставляет HTTPAddr-обработчики для управления метриками с использованием фреймворка Gin.
 // Определяет MetricsHandler, который интегрируется с MetricService для выполнения операций с метриками.
 package handlers
 
@@ -33,7 +33,7 @@ type MetricService interface {
 	Ping(ctx context.Context) error
 }
 
-// MetricsHandler управляет HTTP-маршрутами и обработчиками для операций с метриками.
+// MetricsHandler управляет HTTPAddr-маршрутами и обработчиками для операций с метриками.
 // Использует MetricService для взаимодействия с хранилищем и Gin-роутер для обработки запросов.
 type MetricsHandler struct {
 	router  *gin.Engine
@@ -49,7 +49,7 @@ func NewMetricHandler(service MetricService, router *gin.Engine) *MetricsHandler
 	}
 }
 
-// RegisterRoutes регистрирует HTTP-маршруты для операций с метриками на роутере MetricsHandler.
+// RegisterRoutes регистрирует HTTPAddr-маршруты для операций с метриками на роутере MetricsHandler.
 // Настраивает конечные точки для сохранения, получения и проверки метрик.
 func (h MetricsHandler) RegisterRoutes() {
 	uri := "/:metricType/:metricName"
@@ -129,7 +129,7 @@ func (MetricsHandler) getMetricValue(metric commonmodels.Metric) any {
 }
 
 // saveAll обрабатывает POST-запросы для сохранения нескольких метрик из JSON-данных.
-// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+// Возвращает HTTPAddr 200 при успехе или статус ошибки при неудаче.
 func (h MetricsHandler) saveAll(g *gin.Context) {
 	rawData, err := g.GetRawData()
 	if err != nil {
@@ -153,7 +153,7 @@ func (h MetricsHandler) saveAll(g *gin.Context) {
 }
 
 // saveJSON обрабатывает POST-запросы для сохранения одной метрики из JSON-данных.
-// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+// Возвращает HTTPAddr 200 при успехе или статус ошибки при неудаче.
 func (h MetricsHandler) saveJSON(g *gin.Context) {
 	rawData, err := g.GetRawData()
 	if err != nil {
@@ -176,7 +176,7 @@ func (h MetricsHandler) saveJSON(g *gin.Context) {
 }
 
 // save обрабатывает POST-запросы для сохранения одной метрики из параметров URL.
-// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+// Возвращает HTTPAddr 200 при успехе или статус ошибки при неудаче.
 func (h MetricsHandler) save(g *gin.Context) {
 	m, err := h.parseURL(g.Request.RequestURI, "update")
 	if err == nil {
@@ -242,7 +242,7 @@ func (h MetricsHandler) getAll(g *gin.Context) {
 }
 
 // ping обрабатывает GET-запросы для проверки доступности хранилища метрик.
-// Возвращает HTTP 200 при успехе или статус ошибки при неудаче.
+// Возвращает HTTPAddr 200 при успехе или статус ошибки при неудаче.
 func (h MetricsHandler) ping(g *gin.Context) {
 	err := h.service.Ping(g)
 	if err != nil {

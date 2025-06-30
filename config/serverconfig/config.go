@@ -11,7 +11,8 @@ import (
 )
 
 type ServerConfig struct {
-	HTTP            config.HTTPConfig `env:"ADDRESS"`
+	HTTPAddr        config.AddrConfig `env:"ADDRESS"`
+	GRPCAddr        config.AddrConfig `env:"GRPC_ADDRESS"`
 	StoreInterval   int               `env:"STORE_INTERVAL"`
 	FileStoragePath string            `env:"FILE_STORAGE_PATH"`
 	Restore         bool              `env:"RESTORE"`
@@ -45,12 +46,17 @@ func (cfg *ServerConfig) parseFromFlags() {
 	key := flag.String("k", "", "secret key")
 	cryptoKey := flag.String("crypto-key", "", "secret key")
 	databaseDSN := flag.String("d", "", "database DSN")
-	httpConfig := config.NewDefaultConfig()
 	trustedSubnet := flag.String("t", "", "trusted subnet")
-	flag.Var(&httpConfig, "a", "server host:port")
+
+	httpAddr := config.NewDefaultHTTPAddr()
+	flag.Var(&httpAddr, "a", "server host:port")
+	flag.Parse()
+	grpcAddr := config.NewDefaultGRPCAddr()
+	flag.Var(&grpcAddr, "g", "server host:port")
 	flag.Parse()
 
-	cfg.HTTP = httpConfig
+	cfg.HTTPAddr = httpAddr
+	cfg.GRPCAddr = grpcAddr
 	cfg.StoreInterval = *sInterval
 	cfg.FileStoragePath = *sPath
 	cfg.Restore = *restore
@@ -63,8 +69,8 @@ func (cfg *ServerConfig) parseFromFlags() {
 func (cfg *ServerConfig) parseFromEnv() error {
 	return env.ParseWithOptions(cfg, env.Options{
 		FuncMap: map[reflect.Type]env.ParserFunc{
-			reflect.TypeOf(config.HTTPConfig{}): func(v string) (interface{}, error) {
-				httpConfig := config.HTTPConfig{}
+			reflect.TypeOf(config.AddrConfig{}): func(v string) (interface{}, error) {
+				httpConfig := config.AddrConfig{}
 				err := httpConfig.Set(v)
 				if err != nil {
 					return nil, err
@@ -97,7 +103,8 @@ func (cfg *ServerConfig) parseFromFile() error {
 	}
 
 	type tmpConfig struct {
-		Address       string `json:"address"`
+		HTTPAddress   string `json:"address"`
+		GRPCAddress   string `json:"grpc_address"`
 		Restore       bool   `json:"restore"`
 		StoreInterval string `json:"store_interval"`
 		StoreFile     string `json:"store_file"`
@@ -111,13 +118,22 @@ func (cfg *ServerConfig) parseFromFile() error {
 		return err
 	}
 
-	if tmp.Address != "" {
-		httpConfig := config.NewDefaultConfig()
-		err = httpConfig.Set(tmp.Address)
+	if tmp.HTTPAddress != "" {
+		httpConfig := config.NewDefaultHTTPAddr()
+		err = httpConfig.Set(tmp.HTTPAddress)
 		if err != nil {
 			return err
 		}
-		cfg.HTTP = httpConfig
+		cfg.HTTPAddr = httpConfig
+	}
+
+	if tmp.GRPCAddress != "" {
+		addrConfig := config.NewDefaultGRPCAddr()
+		err = addrConfig.Set(tmp.GRPCAddress)
+		if err != nil {
+			return err
+		}
+		cfg.GRPCAddr = addrConfig
 	}
 
 	if tmp.StoreInterval != "" {

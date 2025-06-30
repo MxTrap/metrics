@@ -20,7 +20,7 @@ type logger interface {
 	LoggerMiddleware() gin.HandlerFunc
 }
 
-func NewRouter(cfg config.HTTPConfig, log logger, key string, cryptoKey string, cidr string) *HTTPServer {
+func NewRouter(cfg config.AddrConfig, log logger, key string, cryptoKey string, cidr string) *HTTPServer {
 	router := gin.New()
 	router.Use(
 		log.LoggerMiddleware(),

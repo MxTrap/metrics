@@ -67,7 +67,7 @@ func TestNewApp(t *testing.T) {
 
 	// Конфигурация без PostgreSQL
 	cfg := &serverconfig.ServerConfig{
-		HTTP:            config.HTTPConfig{Host: "localhost", Port: 8080},
+		HTTPAddr:        config.AddrConfig{Host: "localhost", Port: 8080},
 		FileStoragePath: "",
 		StoreInterval:   300,
 		Restore:         true,
@@ -76,11 +76,10 @@ func TestNewApp(t *testing.T) {
 	}
 
 	// Создаём App
-	app, err := NewApp(cfg)
+	app, err := NewApp(cfg, context.Background())
 	require.NoError(t, err, "NewApp should succeed")
 	assert.NotNil(t, app, "app should not be nil")
 	assert.NotNil(t, app.httpServer, "httpServer should not be nil")
 	assert.NotNil(t, app.metricsService, "metricsService should not be nil")
 	assert.NotNil(t, app.logger, "logger should not be nil")
-	assert.Equal(t, context.Background(), app.ctx, "ctx should be background context")
 }

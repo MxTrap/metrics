@@ -69,7 +69,7 @@ func TestNewServerConfig(t *testing.T) {
 	require.NoError(t, err, "NewServerConfig should succeed")
 
 	// Проверяем, что значения из переменных окружения имеют приоритет
-	assert.Equal(t, config.HTTPConfig{Host: "192.168.1.1", Port: 8081}, cfg.HTTP, "HTTP should match env")
+	assert.Equal(t, config.AddrConfig{Host: "192.168.1.1", Port: 8081}, cfg.HTTPAddr, "HTTPAddr should match env")
 	assert.Equal(t, 900, cfg.StoreInterval, "StoreInterval should match env")
 	assert.Equal(t, "/tmp/env_metrics.txt", cfg.FileStoragePath, "FileStoragePath should match env")
 	assert.False(t, cfg.Restore, "Restore should match env")
@@ -109,7 +109,7 @@ func TestParseFromFile(t *testing.T) {
 	err = cfg.parseFromFile()
 	require.NoError(t, err, "parseFromFile should succeed")
 
-	assert.Equal(t, config.HTTPConfig{Host: "127.0.0.1", Port: 9090}, cfg.HTTP, "HTTP should match file")
+	assert.Equal(t, config.AddrConfig{Host: "127.0.0.1", Port: 9090}, cfg.HTTPAddr, "HTTPAddr should match file")
 	assert.Equal(t, 600, cfg.StoreInterval, "StoreInterval should match file")
 	assert.Equal(t, "/tmp/metrics.txt", cfg.FileStoragePath, "FileStoragePath should match file")
 	assert.True(t, cfg.Restore, "Restore should match file")
@@ -134,7 +134,7 @@ func TestParseFromFlags(t *testing.T) {
 	cfg := &ServerConfig{}
 	cfg.parseFromFlags()
 
-	assert.Equal(t, config.HTTPConfig{Host: "localhost", Port: 8082}, cfg.HTTP, "HTTP should match flags")
+	assert.Equal(t, config.AddrConfig{Host: "localhost", Port: 8082}, cfg.HTTPAddr, "HTTPAddr should match flags")
 	assert.Equal(t, 1200, cfg.StoreInterval, "StoreInterval should match flags")
 	assert.Equal(t, "/tmp/flag_metrics.txt", cfg.FileStoragePath, "FileStoragePath should match flags")
 	assert.True(t, cfg.Restore, "Restore should match flags")
@@ -167,7 +167,7 @@ func TestParseFromEnv(t *testing.T) {
 	err := cfg.parseFromEnv()
 	require.NoError(t, err, "parseFromEnv should succeed")
 
-	assert.Equal(t, config.HTTPConfig{Host: "192.168.1.1", Port: 8081}, cfg.HTTP, "HTTP should match env")
+	assert.Equal(t, config.AddrConfig{Host: "192.168.1.1", Port: 8081}, cfg.HTTPAddr, "HTTPAddr should match env")
 	assert.Equal(t, 900, cfg.StoreInterval, "StoreInterval should match env")
 	assert.Equal(t, "/tmp/env_metrics.txt", cfg.FileStoragePath, "FileStoragePath should match env")
 	assert.False(t, cfg.Restore, "Restore should match env")

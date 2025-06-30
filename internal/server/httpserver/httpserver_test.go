@@ -24,7 +24,7 @@ func (m *mockLogger) LoggerMiddleware() gin.HandlerFunc {
 }
 
 func TestNewRouter(t *testing.T) {
-	cfg := config.HTTPConfig{
+	cfg := config.AddrConfig{
 		Host: "localhost",
 		Port: 8080,
 	}
@@ -48,7 +48,7 @@ func TestNewRouter(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	cfg := config.HTTPConfig{
+	cfg := config.AddrConfig{
 		Host: "localhost",
 		Port: 0,
 	}
@@ -76,7 +76,7 @@ func TestStop(t *testing.T) {
 }
 
 func TestNewRouterInvalidTemplatesPath(t *testing.T) {
-	cfg := config.HTTPConfig{
+	cfg := config.AddrConfig{
 		Host: "localhost",
 		Port: 8080,
 	}

@@ -11,7 +11,8 @@ import (
 )
 
 type AgentConfig struct {
-	ServerConfig   config.HTTPConfig `env:"ADDRESS"`
+	HTTPServerAddr config.AddrConfig `env:"ADDRESS"`
+	GRPCServerAddr config.AddrConfig `env:"GRPC_ADDRESS"`
 	ReportInterval int               `env:"REPORT_INTERVAL"`
 	PollInterval   int               `env:"POLL_INTERVAL"`
 	Key            string            `env:"KEY"`
@@ -41,11 +42,17 @@ func (cfg *AgentConfig) parseFromFlags() {
 	key := flag.String("k", "", "secret key")
 	rateLimit := flag.Int("l", 1, "rate limit")
 	cryptoKey := flag.String("crypto-key", "", "crypto key")
-	httpConfig := config.NewDefaultConfig()
-	flag.Var(&httpConfig, "a", "server host:port")
+
+	httpAddr := config.NewDefaultHTTPAddr()
+	flag.Var(&httpAddr, "a", "server host:port")
 	flag.Parse()
 
-	cfg.ServerConfig = httpConfig
+	grpcAddr := config.NewDefaultGRPCAddr()
+	flag.Var(&grpcAddr, "g", "server host:port")
+	flag.Parse()
+
+	cfg.HTTPServerAddr = httpAddr
+	cfg.GRPCServerAddr = grpcAddr
 	cfg.ReportInterval = *rInterval
 	cfg.PollInterval = *pInterval
 	cfg.Key = *key
@@ -57,8 +64,8 @@ func (cfg *AgentConfig) parseFromFlags() {
 func (cfg *AgentConfig) parseFromEnv() error {
 	return env.ParseWithOptions(cfg, env.Options{
 		FuncMap: map[reflect.Type]env.ParserFunc{
-			reflect.TypeOf(config.HTTPConfig{}): func(v string) (interface{}, error) {
-				httpConfig := config.HTTPConfig{}
+			reflect.TypeOf(config.AddrConfig{}): func(v string) (interface{}, error) {
+				httpConfig := config.AddrConfig{}
 				err := httpConfig.Set(v)
 				if err != nil {
 					return nil, err
@@ -93,6 +100,7 @@ func (cfg *AgentConfig) parseFromFile() error {
 
 	type tmpConfig struct {
 		Address        string `json:"address"`
+		GRPCAddress    string `json:"grpc_address"`
 		ReportInterval string `json:"report_interval"`
 		PollInterval   string `json:"poll_interval"`
 		CryptoKey      string `json:"crypto_key"`
@@ -105,12 +113,23 @@ func (cfg *AgentConfig) parseFromFile() error {
 	}
 
 	if tmp.Address != "" {
-		httpConfig := config.NewDefaultConfig()
+		httpConfig := config.NewDefaultHTTPAddr()
 		err = httpConfig.Set(tmp.Address)
 		if err != nil {
 			return err
 		}
-		cfg.ServerConfig = httpConfig
+		cfg.HTTPServerAddr = httpConfig
+	}
+	if tmp.GRPCAddress != "" {
+		grpcConfig := config.AddrConfig{
+			Host: "localhost",
+			Port: 9090,
+		}
+		err = grpcConfig.Set(tmp.GRPCAddress)
+		if err != nil {
+			return err
+		}
+		cfg.GRPCServerAddr = grpcConfig
 	}
 	if tmp.ReportInterval != "" {
 		dReportInterval, err := time.ParseDuration(tmp.ReportInterval)
