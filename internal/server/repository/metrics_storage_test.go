@@ -2,131 +2,129 @@ package repository
 
 import (
 	"context"
-	common_models "github.com/MxTrap/metrics/internal/common/models"
-	"github.com/MxTrap/metrics/internal/common/utils"
+	"github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestMemStorage_Save(t *testing.T) {
-	p1 := utils.MakePointer[int64](1)
-	p2 := utils.MakePointer[int64](2)
-	p3 := utils.MakePointer[int64](3)
-
-	tests := []struct {
-		name string
-		args []common_models.Metric
-		want map[string]common_models.Metric
-	}{
-		{
-			name: "save counter metric",
-			args: []common_models.Metric{
-				{
-					ID:    "metric",
-					MType: "counter",
-					Delta: p1,
-				},
-			},
-			want: map[string]common_models.Metric{
-				"metric": {
-					ID:    "metric",
-					MType: "counter",
-					Delta: p1,
-				},
-			},
-		},
-		{
-			name: "save some counter metric",
-			args: []common_models.Metric{
-				{
-					ID:    "metric1",
-					MType: "counter",
-					Delta: p1,
-				},
-				{
-					ID:    "metric2",
-					MType: "counter",
-					Delta: p2,
-				},
-				{
-					ID:    "metric3",
-					MType: "counter",
-					Delta: p3,
-				},
-			},
-			want: map[string]common_models.Metric{
-				"metric1": {
-					ID:    "metric1",
-					MType: "counter",
-					Delta: p1,
-				},
-				"metric2": {
-					ID:    "metric2",
-					MType: "counter",
-					Delta: p2,
-				},
-				"metric3": {
-					ID:    "metric3",
-					MType: "counter",
-					Delta: p3,
-				},
-			},
-		},
-		{
-			name: "save same counter metrics",
-			args: []common_models.Metric{
-				{
-					ID:    "metric1",
-					MType: "counter",
-					Delta: p1,
-				},
-				{
-					ID:    "metric1",
-					MType: "counter",
-					Delta: p2,
-				},
-			},
-			want: map[string]common_models.Metric{
-				"metric1": {
-					ID:    "metric1",
-					MType: "counter",
-					Delta: p2,
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &MemStorage{
-				metrics: map[string]common_models.Metric{},
-			}
-			ctx := context.TODO()
-			for _, arg := range tt.args {
-				err := s.Save(ctx, arg)
-				assert.NoError(t, err)
-			}
-			assert.Equal(t, tt.want, s.metrics)
-		})
-	}
+func TestNewMemStorage(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+	assert.NotNil(t, storage)
+	assert.NotNil(t, storage.metrics)
+	assert.Empty(t, storage.metrics)
 }
 
-func TestNewMemStorage(t *testing.T) {
-	tests := []struct {
-		name string
-		want *MemStorage
-	}{
-		{
-			name: "test storage creation",
-			want: &MemStorage{
-				metrics: map[string]common_models.Metric{},
-			},
-		},
+func TestPing(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	err = storage.Ping(context.Background())
+	assert.Error(t, err)
+	assert.Equal(t, "not implemented", err.Error())
+}
+
+func TestSaveGauge(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	metric := models.Metric{
+		ID:    "testGauge",
+		MType: models.Gauge,
+		Value: utils.MakePointer(42.5),
 	}
-	for _, tt := range tests {
-		storage, err := NewMemStorage()
-		assert.NoError(t, err)
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, storage, tt.want)
-		})
+	err = storage.Save(context.Background(), metric)
+	require.NoError(t, err)
+
+	saved, err := storage.Find(context.Background(), "testGauge")
+	require.NoError(t, err)
+	assert.Equal(t, metric, saved)
+}
+
+func TestSaveCounter(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	metric1 := models.Metric{
+		ID:    "testCounter",
+		MType: models.Counter,
+		Delta: utils.MakePointer[int64](10),
 	}
+	err = storage.Save(context.Background(), metric1)
+	require.NoError(t, err)
+
+	metric2 := models.Metric{
+		ID:    "testCounter",
+		MType: models.Counter,
+		Delta: utils.MakePointer[int64](20),
+	}
+	err = storage.Save(context.Background(), metric2)
+	require.NoError(t, err)
+
+	saved, err := storage.Find(context.Background(), "testCounter")
+	require.NoError(t, err)
+	assert.Equal(t, models.Counter, saved.MType)
+	assert.Equal(t, int64(30), *saved.Delta)
+}
+
+func TestFindNotFound(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	_, err = storage.Find(context.Background(), "nonexistent")
+	assert.Error(t, err)
+	assert.Equal(t, "not found", err.Error())
+}
+
+func TestGetAll(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	metrics := map[string]models.Metric{
+		"gauge1":   {ID: "gauge1", MType: models.Gauge, Value: utils.MakePointer(42.5)},
+		"counter1": {ID: "counter1", MType: models.Counter, Delta: utils.MakePointer(int64(100))},
+	}
+	for _, m := range metrics {
+		err = storage.Save(context.Background(), m)
+		require.NoError(t, err)
+	}
+
+	result, err := storage.GetAll(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, metrics, result)
+}
+
+func TestGetAllEmpty(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	result, err := storage.GetAll(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, result)
+}
+
+func TestSaveAll(t *testing.T) {
+	storage, err := NewMemStorage()
+	require.NoError(t, err)
+
+	existing := map[string]models.Metric{
+		"gauge1": {ID: "gauge1", MType: models.Gauge, Value: utils.MakePointer(42.5)},
+	}
+	for _, m := range existing {
+		err = storage.Save(context.Background(), m)
+		require.NoError(t, err)
+	}
+
+	newMetrics := map[string]models.Metric{
+		"gauge1":   {ID: "gauge1", MType: models.Gauge, Value: utils.MakePointer(99.9)},
+		"counter1": {ID: "counter1", MType: models.Counter, Delta: utils.MakePointer[int64](100)},
+	}
+	err = storage.SaveAll(context.Background(), newMetrics)
+	require.NoError(t, err)
+
+	result, err := storage.GetAll(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, newMetrics, result)
 }

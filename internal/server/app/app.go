@@ -101,8 +101,12 @@ func (a App) Run(ctx context.Context) error {
 
 func (a App) GracefulShutdown(ctx context.Context) error {
 	a.logger.Logger.Info("shutting down server")
-	a.metricsService.Stop()
-	err := a.httpServer.Stop(ctx)
+	err := a.metricsService.Stop(ctx)
+	if err != nil {
+		a.logger.Logger.Error(err.Error())
+		return err
+	}
+	err = a.httpServer.Stop(ctx)
 	if err != nil {
 		a.logger.Logger.Error(err.Error())
 		return err

@@ -68,6 +68,7 @@ func TestRun(t *testing.T) {
 	// Мокаем service и httpClient
 	serviceRunner := &mockRunner{}
 	clientRunner := &mockRunner{}
+	grpcRunner := &mockRunner{}
 
 	// Создаём каналы для отслеживания вызовов
 	serviceStarted := make(chan struct{})
@@ -78,10 +79,12 @@ func TestRun(t *testing.T) {
 	clientRunner.On("Run", mock.Anything).Run(func(args mock.Arguments) {
 		close(clientStarted)
 	}).Return()
+	grpcRunner.On("Run", mock.Anything).Run(func(args mock.Arguments) {})
 
 	app := &App{
 		service:    serviceRunner,
 		httpClient: clientRunner,
+		grpcClient: grpcRunner,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -91,8 +94,7 @@ func TestRun(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := app.Run(ctx)
-		assert.NoError(t, err, "Run should succeed")
+		app.Run(ctx)
 	}()
 
 	select {

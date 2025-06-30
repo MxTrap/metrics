@@ -3,9 +3,8 @@ package http
 import (
 	"compress/gzip"
 	"context"
-	"encoding/json"
-	"github.com/MxTrap/metrics/internal/agent/models"
 	commonmodels "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -23,6 +22,15 @@ type mockMetricsObserver struct {
 func (m *mockMetricsObserver) GetMetrics() commonmodels.Metrics {
 	args := m.Called()
 	return args.Get(0).(commonmodels.Metrics)
+}
+
+type mockEncrypter struct {
+	mock.Mock
+}
+
+func (m *mockEncrypter) Encrypt(plaintext []byte) ([]byte, error) {
+	args := m.Called(plaintext)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 func TestNewHTTPClient(t *testing.T) {
@@ -54,6 +62,14 @@ func TestCompress(t *testing.T) {
 	assert.Equal(t, data, decompressed, "decompressed data should match original")
 }
 
+func TestRegisterEncrypter(t *testing.T) {
+	getter := &mockMetricsObserver{}
+	encrypter := &mockEncrypter{}
+	client := NewClient(getter, "localhost:8080", 2, "secret", 3)
+	client.RegisterEncrypter(encrypter)
+	assert.Equal(t, encrypter, client.encrypter)
+}
+
 func TestPostMetric(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"), "Content-Type should be application/json")
@@ -68,14 +84,14 @@ func TestPostMetric(t *testing.T) {
 	}))
 	defer server.Close()
 
-	metrics := []commonmodels.Metric{
-		{ID: "testGauge", MType: commonmodels.Gauge, Value: new(float64)},
+	metrics := commonmodels.Metrics{
+		{ID: "testGauge", MType: commonmodels.Gauge, Value: utils.MakePointer(42.0)},
 	}
-	*metrics[0].Value = 42.0
 
 	key := "testkey"
 	observer := &mockMetricsObserver{}
-	client := NewClient(observer, server.URL[7:], 2, key, 1) // убираем "http://"
+	observer.On("GetMetrics").Return(metrics)
+	client := NewClient(observer, server.URL[7:], 2, key, 1)
 
 	ctx := context.Background()
 	err := client.postMetric(ctx)
@@ -96,6 +112,7 @@ func TestPostMetricWithRetries(t *testing.T) {
 	defer server.Close()
 
 	observer := &mockMetricsObserver{}
+	observer.On("GetMetrics").Return(commonmodels.Metrics{})
 	client := NewClient(observer, server.URL[7:], 2, "", 1)
 	ctx := context.Background()
 
@@ -103,56 +120,10 @@ func TestPostMetricWithRetries(t *testing.T) {
 	require.NoError(t, err, "postMetric should succeed after retries")
 }
 
-func TestSendMetrics(t *testing.T) {
-	observer := &mockMetricsObserver{}
-	gauge := models.NewGaugeMetrics()
-	gauge.Set("testGauge", 42.0)
-	metrics := models.Metrics{
-		Gauge: *gauge,
-		Counter: models.CounterMetrics{
-			PollCount: 100,
-		},
-	}
-	observer.On("GetMetrics").Return(metrics)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reader, err := gzip.NewReader(r.Body)
-		require.NoError(t, err, "failed to create gzip reader")
-		defer reader.Close()
-		body, err := io.ReadAll(reader)
-		require.NoError(t, err, "failed to read request body")
-
-		var receivedMetrics []commonmodels.Metric
-		err = json.Unmarshal(body, &receivedMetrics)
-		require.NoError(t, err, "failed to unmarshal metrics")
-
-		assert.Len(t, receivedMetrics, 2, "should send 2 metrics")
-		assert.Equal(t, "testGauge", receivedMetrics[0].ID, "gauge metric ID should match")
-		assert.Equal(t, commonmodels.Gauge, receivedMetrics[0].MType, "gauge metric type should match")
-		assert.Equal(t, 42.0, *receivedMetrics[0].Value, "gauge metric value should match")
-		assert.Equal(t, "PollCount", receivedMetrics[1].ID, "counter metric ID should match")
-		assert.Equal(t, commonmodels.Counter, receivedMetrics[1].MType, "counter metric type should match")
-		assert.Equal(t, int64(100), *receivedMetrics[1].Delta, "counter metric delta should match")
-
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(observer, server.URL[7:], 2, "", 1)
-	ctx := context.Background()
-
-	err := client.postMetric(ctx)
-	require.NoError(t, err, "sendMetrics should succeed")
-	observer.AssertExpectations(t)
-}
-
 func TestRun(t *testing.T) {
 	observer := &mockMetricsObserver{}
-	metrics := models.Metrics{
-		Gauge: *models.NewGaugeMetrics(),
-		Counter: models.CounterMetrics{
-			PollCount: 100,
-		},
+	metrics := commonmodels.Metrics{
+		{ID: "PollCount", MType: commonmodels.Counter, Value: utils.MakePointer[float64](100)},
 	}
 	observer.On("GetMetrics").Return(metrics).Times(2) // Ожидаем минимум 2 вызова
 
@@ -169,7 +140,6 @@ func TestRun(t *testing.T) {
 
 	go client.Run(ctx)
 
-	// Ждём несколько отправок метрик
 	time.Sleep(2500 * time.Millisecond)
 
 	assert.GreaterOrEqual(t, requestCount, 2, "should send at least 2 requests")

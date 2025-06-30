@@ -2,7 +2,7 @@ package repository
 
 import (
 	"encoding/json"
-	"github.com/MxTrap/metrics/internal/common/utils"
+	"github.com/MxTrap/metrics/internal/utils"
 	"os"
 	"path/filepath"
 	"testing"

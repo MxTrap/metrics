@@ -6,20 +6,20 @@ import (
 	"net/http"
 )
 
-func IpValidator(cidr string) gin.HandlerFunc {
+func IPValidator(cidr string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if cidr == "" {
 			c.Next()
 			return
 		}
 
-		xRealIp := c.Request.Header.Get("X-Real-IP")
-		if xRealIp == "" {
+		xRealIP := c.Request.Header.Get("X-Real-IP")
+		if xRealIP == "" {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
 
-		ip := net.ParseIP(xRealIp)
+		ip := net.ParseIP(xRealIP)
 		if ip == nil {
 			c.AbortWithStatus(http.StatusForbidden)
 			return

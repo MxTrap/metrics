@@ -1,10 +1,12 @@
 package logger
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -99,4 +101,43 @@ func TestLoggerMiddleware_Duration(t *testing.T) {
 	_, err := c.Writer.Write([]byte("OK"))
 	assert.NoError(t, err, "Write should succeed")
 
+}
+
+type mockSugaredLogger struct {
+	mock.Mock
+}
+
+func (m *mockSugaredLogger) Infoln(args ...interface{}) {
+	m.Called(args)
+}
+
+func (m *mockSugaredLogger) Sync() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func TestLoggerInterceptorSuccess(t *testing.T) {
+	mockLogger := &mockSugaredLogger{}
+	logger := &Logger{Logger: *zap.NewExample().Sugar()}
+
+	mockHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "response", nil
+	}
+
+	mockLogger.On("Infoln", mock.MatchedBy(func(args []interface{}) bool {
+		return len(args) == 8 &&
+			args[0] == "full method" && args[1] == "/service/TestMethod" &&
+			args[2] == "duration" && args[3].(time.Duration) > 0 &&
+			args[4] == "status" && args[5] == "response" &&
+			args[6] == "err" && args[7] == nil
+	})).Return()
+
+	// Выполняем интерцептор
+	ctx := context.Background()
+	info := &grpc.UnaryServerInfo{FullMethod: "/service/TestMethod"}
+	resp, err := logger.LoggerInterceptor(ctx, "request", info, mockHandler)
+
+	// Проверяем результат
+	assert.NoError(t, err)
+	assert.Equal(t, "response", resp)
 }

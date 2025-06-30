@@ -19,7 +19,7 @@ func NewGRPCServer(addr config.AddrConfig, logger grpc.UnaryServerInterceptor, c
 		grpc.ChainUnaryInterceptor(
 			logger,
 			interceptors.StatusErrorInterceptor,
-			interceptors.IpValidator(cidr),
+			interceptors.IPValidator(cidr),
 		),
 	)
 

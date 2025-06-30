@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// mockMetricService реализует MetricService для тестовых примеров.
+// mockMetricSvc реализует MetricService для тестовых примеров.
 type mockMetricService struct {
 	metrics map[string]models.Metric
 }

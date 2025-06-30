@@ -9,7 +9,7 @@ import (
 	"net"
 )
 
-func IpValidator(cidr string) grpc.UnaryServerInterceptor {
+func IPValidator(cidr string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if cidr == "" {
 			return handler(ctx, req)

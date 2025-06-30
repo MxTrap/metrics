@@ -58,10 +58,9 @@ func NewApp(cfg *agentconfig.AgentConfig) *App {
 	}
 }
 
-func (a *App) Run(ctx context.Context) error {
+func (a *App) Run(ctx context.Context) {
 	fmt.Println("starting metrics observer")
 	go a.service.Run(ctx)
 	go a.httpClient.Run(ctx)
 	go a.grpcClient.Run(ctx)
-	return nil
 }

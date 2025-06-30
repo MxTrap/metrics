@@ -25,7 +25,7 @@ func NewRouter(cfg config.AddrConfig, log logger, key string, cryptoKey string, 
 	router.Use(
 		log.LoggerMiddleware(),
 		gin.Recovery(),
-		middlewares.IpValidator(cidr),
+		middlewares.IPValidator(cidr),
 		middlewares.HashDecodeMiddleware(key),
 		middlewares.ContentEncodingMiddleware(),
 		middlewares.AcceptEncodingMiddleware(),

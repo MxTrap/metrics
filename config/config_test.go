@@ -6,11 +6,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewDefaultConfig(t *testing.T) {
+func TestNewDefaultHTTPAddr(t *testing.T) {
 	config := NewDefaultHTTPAddr()
 	expected := AddrConfig{
 		Host: "localhost",
 		Port: 8080,
+	}
+	assert.Equal(t, expected, config, "NewDefaultHTTPAddr should return default AddrConfig")
+}
+
+func TestNewDefaultGRPCAddr(t *testing.T) {
+	config := NewDefaultGRPCAddr()
+	expected := AddrConfig{
+		Host: "localhost",
+		Port: 9090,
 	}
 	assert.Equal(t, expected, config, "NewDefaultHTTPAddr should return default AddrConfig")
 }
