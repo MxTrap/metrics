@@ -4,268 +4,324 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/MxTrap/metrics/internal/common/models"
+	"github.com/gin-gonic/gin"
+	"github.com/mailru/easyjson"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	commonmodels "github.com/MxTrap/metrics/internal/common/models"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-// MockMetricService для мока интерфейса MetricService
-type MockMetricService struct {
+type mockMetricSvc struct {
 	mock.Mock
 }
 
-func (m *MockMetricService) Save(ctx context.Context, metric commonmodels.Metric) error {
+func (m *mockMetricSvc) Save(ctx context.Context, metric models.Metric) error {
 	args := m.Called(ctx, metric)
 	return args.Error(0)
 }
 
-func (m *MockMetricService) SaveAll(ctx context.Context, metrics []commonmodels.Metric) error {
+func (m *mockMetricSvc) SaveAll(ctx context.Context, metrics []models.Metric) error {
 	args := m.Called(ctx, metrics)
 	return args.Error(0)
 }
 
-func (m *MockMetricService) Find(ctx context.Context, metric commonmodels.Metric) (commonmodels.Metric, error) {
+func (m *mockMetricSvc) Find(ctx context.Context, metric models.Metric) (models.Metric, error) {
 	args := m.Called(ctx, metric)
-	return args.Get(0).(commonmodels.Metric), args.Error(1)
+	return args.Get(0).(models.Metric), args.Error(1)
 }
 
-func (m *MockMetricService) GetAll(ctx context.Context) (map[string]interface{}, error) {
+func (m *mockMetricSvc) GetAll(ctx context.Context) (map[string]interface{}, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(map[string]interface{}), args.Error(1)
 }
 
-func (m *MockMetricService) Ping(ctx context.Context) error {
+func (m *mockMetricSvc) Ping(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)
 }
 
-func setupRouter(h *MetricsHandler) *gin.Engine {
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	h.router = r
-	h.RegisterRoutes()
-	return r
+func TestNewMetricHandler(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	assert.NotNil(t, handler)
+	assert.Equal(t, service, handler.service)
+	assert.Equal(t, router, handler.router)
+}
+
+func TestRegisterRoutes(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	handler.RegisterRoutes()
+
+	routes := router.Routes()
+	routePaths := make([]string, len(routes))
+	for i, r := range routes {
+		routePaths[i] = r.Path
+	}
+
+	expectedPaths := []string{
+		"/value/:metricType/:metricName",
+		"/update/",
+		"/update/:metricType/:metricName/:metricValue",
+		"/updates/",
+		"/value/",
+		"/",
+		"/ping",
+	}
+	assert.ElementsMatch(t, expectedPaths, routePaths)
 }
 
 func TestParseMetric(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []byte
-		expected commonmodels.Metric
-		wantErr  bool
-	}{
-		{
-			name:  "Valid gauge metric",
-			input: []byte(`{"id":"testGauge","type":"gauge","value":42.5}`),
-			expected: commonmodels.Metric{
-				ID:    "testGauge",
-				MType: commonmodels.Gauge,
-				Value: float64Ptr(42.5),
-			},
-			wantErr: false,
-		},
-		{
-			name:  "Valid counter metric",
-			input: []byte(`{"id":"testCounter","type":"counter","delta":100}`),
-			expected: commonmodels.Metric{
-				ID:    "testCounter",
-				MType: commonmodels.Counter,
-				Delta: int64Ptr(100),
-			},
-			wantErr: false,
-		},
-		{
-			name:     "Invalid JSON",
-			input:    []byte(`{"id":"test","type":"gauge",value:42.5}`),
-			expected: commonmodels.Metric{},
-			wantErr:  true,
-		},
-	}
+	handler := MetricsHandler{}
+	metric := models.Metric{ID: "testGauge", MType: models.Gauge, Value: ptr(42.5)}
+	data, err := easyjson.Marshal(metric)
+	require.NoError(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := MetricsHandler{}
-			result, err := h.parseMetric(tt.input)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
-		})
-	}
+	parsed, err := handler.parseMetric(data)
+	require.NoError(t, err)
+	assert.Equal(t, metric, parsed)
+
+	invalidData := []byte("invalid json")
+	_, err = handler.parseMetric(invalidData)
+	assert.Error(t, err)
 }
 
 func TestParseURL(t *testing.T) {
+	handler := MetricsHandler{}
 	tests := []struct {
-		name     string
-		url      string
-		search   string
-		expected commonmodels.Metric
-		wantErr  bool
+		name        string
+		url         string
+		searchWord  string
+		expected    models.Metric
+		expectError bool
 	}{
 		{
-			name:   "Valid gauge URL",
-			url:    "/update/gauge/testGauge/42.5",
-			search: "update",
-			expected: commonmodels.Metric{
-				ID:    "testGauge",
-				MType: commonmodels.Gauge,
-				Value: float64Ptr(42.5),
-			},
-			wantErr: false,
+			name:       "ValidGauge",
+			url:        "/update/gauge/testGauge/42.5",
+			searchWord: "update",
+			expected:   models.Metric{ID: "testGauge", MType: models.Gauge, Value: ptr(42.5)},
 		},
 		{
-			name:   "Valid counter URL",
-			url:    "/update/counter/testCounter/100",
-			search: "update",
-			expected: commonmodels.Metric{
-				ID:    "testCounter",
-				MType: commonmodels.Counter,
-				Delta: int64Ptr(100),
-			},
-			wantErr: false,
+			name:       "ValidCounter",
+			url:        "/update/counter/testCounter/100",
+			searchWord: "update",
+			expected:   models.Metric{ID: "testCounter", MType: models.Counter, Delta: ptr(int64(100))},
 		},
 		{
-			name:     "Invalid gauge value",
-			url:      "/update/gauge/testGauge/invalid",
-			search:   "update",
-			expected: commonmodels.Metric{},
-			wantErr:  true,
+			name:        "InvalidURL",
+			url:         "/update/invalid",
+			searchWord:  "update",
+			expectError: true,
+		},
+		{
+			name:        "InvalidGaugeValue",
+			url:         "/update/gauge/testGauge/invalid",
+			searchWord:  "update",
+			expectError: true,
+		},
+		{
+			name:        "InvalidCounterValue",
+			url:         "/update/counter/testCounter/invalid",
+			searchWord:  "update",
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := MetricsHandler{}
-			result, err := h.parseURL(tt.url, tt.search)
-			fmt.Println(result)
-			if tt.wantErr {
+			parsed, err := handler.parseURL(tt.url, tt.searchWord)
+			if tt.expectError {
 				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
+				return
 			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, parsed)
 		})
 	}
 }
 
 func TestGetMetricValue(t *testing.T) {
+	handler := MetricsHandler{}
 	tests := []struct {
 		name     string
-		metric   commonmodels.Metric
+		metric   models.Metric
 		expected interface{}
 	}{
 		{
-			name: "Gauge metric",
-			metric: commonmodels.Metric{
-				MType: commonmodels.Gauge,
-				Value: float64Ptr(42.5),
-			},
+			name:     "Gauge",
+			metric:   models.Metric{MType: models.Gauge, Value: ptr(42.5)},
 			expected: 42.5,
 		},
 		{
-			name: "Counter metric",
-			metric: commonmodels.Metric{
-				MType: commonmodels.Counter,
-				Delta: int64Ptr(100),
-			},
+			name:     "Counter",
+			metric:   models.Metric{MType: models.Counter, Delta: ptr(int64(100))},
 			expected: int64(100),
 		},
 		{
-			name:     "Unknown metric type",
-			metric:   commonmodels.Metric{MType: "unknown"},
+			name:     "UnknownType",
+			metric:   models.Metric{MType: "unknown"},
 			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := MetricsHandler{}
-			result := h.getMetricValue(tt.metric)
+			result := handler.getMetricValue(tt.metric)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
-func TestSave(t *testing.T) {
-	mockService := &MockMetricService{}
-	h := NewMetricHandler(mockService, nil)
-	router := setupRouter(h)
+func TestSaveAll(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	gin.SetMode(gin.TestMode)
 
-	tests := []struct {
-		name           string
-		url            string
-		mockSetup      func()
-		expectedStatus int
-	}{
-		{
-			name: "Successful save",
-			url:  "/update/gauge/testGauge/42.5",
-			mockSetup: func() {
-				metric := commonmodels.Metric{ID: "testGauge", MType: commonmodels.Gauge, Value: float64Ptr(42.5)}
-				mockService.On("Save", mock.Anything, metric).Return(nil)
-			},
-			expectedStatus: http.StatusOK,
-		},
+	metrics := []models.Metric{
+		{ID: "gauge1", MType: models.Gauge, Value: ptr(42.5)},
+		{ID: "counter1", MType: models.Counter, Delta: ptr(int64(100))},
 	}
+	data, err := json.Marshal(metrics)
+	require.NoError(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-			req, _ := http.NewRequest("POST", tt.url, nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-			assert.Equal(t, tt.expectedStatus, w.Code)
-		})
-	}
+	service.On("SaveAll", mock.Anything, metrics).Return(nil)
+
+	req, _ := http.NewRequest("POST", "/updates/", bytes.NewReader(data))
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.saveAll(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+	service.AssertExpectations(t)
 }
 
 func TestSaveJSON(t *testing.T) {
-	mockService := &MockMetricService{}
-	h := NewMetricHandler(mockService, nil)
-	router := setupRouter(h)
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	gin.SetMode(gin.TestMode)
 
-	tests := []struct {
-		name           string
-		body           interface{}
-		mockSetup      func()
-		expectedStatus int
-	}{
-		{
-			name: "Successful save JSON",
-			body: commonmodels.Metric{ID: "testGauge", MType: commonmodels.Gauge, Value: float64Ptr(42.5)},
-			mockSetup: func() {
-				metric := commonmodels.Metric{ID: "testGauge", MType: commonmodels.Gauge, Value: float64Ptr(42.5)}
-				mockService.On("Save", mock.Anything, metric).Return(nil)
-			},
-			expectedStatus: http.StatusOK,
-		},
-	}
+	metric := models.Metric{ID: "gauge1", MType: models.Gauge, Value: ptr(42.5)}
+	data, err := easyjson.Marshal(metric)
+	require.NoError(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-			body, _ := json.Marshal(tt.body)
-			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(body))
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-			assert.Equal(t, tt.expectedStatus, w.Code)
-			mockService.AssertExpectations(t)
-		})
-	}
+	service.On("Save", mock.Anything, metric).Return(nil)
+
+	req, _ := http.NewRequest("POST", "/update/", bytes.NewReader(data))
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.saveJSON(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+	service.AssertExpectations(t)
 }
 
-func float64Ptr(f float64) *float64 {
-	return &f
+func TestSave(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	gin.SetMode(gin.TestMode)
+
+	metric := models.Metric{ID: "gauge1", MType: models.Gauge, Value: ptr(42.5)}
+	service.On("Save", mock.Anything, metric).Return(nil)
+
+	req, _ := http.NewRequest("POST", "/update/gauge/gauge1/42.5", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.save(c)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func int64Ptr(i int64) *int64 {
-	return &i
+func TestFind(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	gin.SetMode(gin.TestMode)
+
+	metric := models.Metric{ID: "gauge1", MType: models.Gauge, Value: ptr(42.5)}
+	service.On("Find", mock.Anything, models.Metric{ID: "gauge1", MType: models.Gauge}).Return(metric, nil)
+
+	req, _ := http.NewRequest("GET", "/value/gauge/gauge1", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.find(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestFindJSON(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	gin.SetMode(gin.TestMode)
+
+	metric := models.Metric{ID: "gauge1", MType: models.Gauge, Value: ptr(42.5)}
+	data, err := easyjson.Marshal(metric)
+	require.NoError(t, err)
+
+	service.On("Find", mock.Anything, metric).Return(metric, nil)
+
+	req, _ := http.NewRequest("POST", "/value/", bytes.NewReader(data))
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.findJSON(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response models.Metric
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, metric, response)
+	service.AssertExpectations(t)
+}
+
+func TestGetAll(t *testing.T) {
+	service := &mockMetricSvc{}
+	gin.SetMode(gin.TestMode)
+
+	metrics := map[string]any{
+		"gauge1":   models.Metric{ID: "gauge1", MType: models.Gauge, Value: ptr(42.5)},
+		"counter1": models.Metric{ID: "counter1", MType: models.Counter, Delta: ptr(int64(100))},
+	}
+	service.On("GetAll", mock.Anything).Return(metrics, nil)
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+}
+
+func TestPing(t *testing.T) {
+	service := &mockMetricSvc{}
+	router := gin.New()
+	handler := NewMetricHandler(service, router)
+	gin.SetMode(gin.TestMode)
+
+	service.On("Ping", mock.Anything).Return(nil)
+
+	req, _ := http.NewRequest("GET", "/ping", nil)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.ping(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+	service.AssertExpectations(t)
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }

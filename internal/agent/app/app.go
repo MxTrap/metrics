@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/MxTrap/metrics/config/agentconfig"
-	"github.com/MxTrap/metrics/internal/agent/httpclient"
+	"github.com/MxTrap/metrics/internal/agent/grpc"
+	"github.com/MxTrap/metrics/internal/agent/http"
 	"github.com/MxTrap/metrics/internal/agent/repository"
 	"github.com/MxTrap/metrics/internal/agent/service"
-	"os"
+	"log"
 )
 
 type runner interface {
@@ -15,40 +16,51 @@ type runner interface {
 }
 
 type App struct {
-	service runner
-	client  runner
+	service    runner
+	httpClient runner
+	grpcClient runner
 }
 
 func NewApp(cfg *agentconfig.AgentConfig) *App {
 	storage := repository.NewMetricsStorage()
 	mService := service.NewMetricsObserverService(storage, cfg.PollInterval)
 
-	client := httpclient.NewHTTPClient(
+	httpClient := http.NewClient(
 		mService,
-		fmt.Sprintf("%s:%d", cfg.ServerConfig.Host, cfg.ServerConfig.Port),
+		fmt.Sprintf("%s:%d", cfg.HTTPServerAddr.Host, cfg.HTTPServerAddr.Port),
 		cfg.ReportInterval,
 		cfg.Key,
 		cfg.RateLimit,
 	)
+	grpcClient, err := grpc.NewClient(
+		fmt.Sprintf("%s:%d", cfg.GRPCServerAddr.Host, cfg.GRPCServerAddr.Port),
+		mService,
+		cfg.ReportInterval,
+		cfg.Key,
+		cfg.RateLimit,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if cfg.CryptoKey != "" {
 		encrypter, err := service.NewEncrypterSvc(cfg.CryptoKey)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
-		client.RegisterEncrypter(encrypter)
+		httpClient.RegisterEncrypter(encrypter)
 	}
 
 	return &App{
-		service: mService,
-		client:  client,
+		service:    mService,
+		httpClient: httpClient,
+		grpcClient: grpcClient,
 	}
 }
 
-func (a App) Run(ctx context.Context) error {
+func (a *App) Run(ctx context.Context) {
 	fmt.Println("starting metrics observer")
 	go a.service.Run(ctx)
-	go a.client.Run(ctx)
-	return nil
+	go a.httpClient.Run(ctx)
+	go a.grpcClient.Run(ctx)
 }

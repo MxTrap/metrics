@@ -1,11 +1,13 @@
 package middlewares
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -145,4 +147,108 @@ func (r *errorReader) Read(p []byte) (n int, err error) {
 
 func (r *errorReader) Close() error {
 	return nil
+}
+
+func TestHashEncodeMiddlewareWithKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	key := "secret"
+	middleware := HashEncodeMiddleware(key)
+	router.Use(middleware)
+	router.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "test response")
+	})
+
+	req, err := http.NewRequest("GET", "/test", nil)
+	require.NoError(t, err)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "test response", w.Body.String())
+
+	expectedHMAC := hmac.New(sha256.New, []byte(key))
+	expectedHMAC.Write([]byte("test response"))
+	expectedHash := hex.EncodeToString(expectedHMAC.Sum(nil))
+	assert.Equal(t, expectedHash, w.Header().Get("HashSHA256"))
+}
+
+func TestHashEncodeMiddlewareEmptyKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	key := ""
+	middleware := HashEncodeMiddleware(key)
+	router.Use(middleware)
+	router.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "test response")
+	})
+
+	req, err := http.NewRequest("GET", "/test", nil)
+	require.NoError(t, err)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Проверяем HTTP-ответ
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "test response", w.Body.String())
+
+	// Проверяем отсутствие заголовка HashSHA256
+	assert.Empty(t, w.Header().Get("HashSHA256"))
+}
+
+func TestResponseWriter(t *testing.T) {
+	key := "secret"
+	body := &bytes.Buffer{}
+	writer := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(writer)
+
+	responseWriter := &responseWriter{
+		ResponseWriter: ctx.Writer,
+		body:           body,
+		key:            key,
+	}
+
+	// Пишем тестовые данные
+	data := []byte("test data")
+	n, err := responseWriter.Write(data)
+	assert.NoError(t, err)
+	assert.Equal(t, len(data), n)
+
+	// Проверяем тело ответа
+	assert.Equal(t, "test data", body.String())
+	assert.Equal(t, "test data", writer.Body.String())
+
+	// Проверяем HMAC-подпись
+	expectedHMAC := hmac.New(sha256.New, []byte(key))
+	expectedHMAC.Write(data)
+	expectedHash := hex.EncodeToString(expectedHMAC.Sum(nil))
+	assert.Equal(t, expectedHash, writer.Header().Get("HashSHA256"))
+}
+
+func TestResponseWriterEmptyData(t *testing.T) {
+	key := "secret"
+	body := &bytes.Buffer{}
+	writer := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(writer)
+	responseWriter := &responseWriter{
+		ResponseWriter: ctx.Writer,
+		body:           body,
+		key:            key,
+	}
+
+	// Пишем пустые данные
+	data := []byte{}
+	n, err := responseWriter.Write(data)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+
+	// Проверяем тело ответа
+	assert.Empty(t, body.String())
+	assert.Empty(t, writer.Body.String())
+
+	// Проверяем HMAC-подпись для пустых данных
+	expectedHMAC := hmac.New(sha256.New, []byte(key))
+	expectedHMAC.Write(data)
+	expectedHash := hex.EncodeToString(expectedHMAC.Sum(nil))
+	assert.Equal(t, expectedHash, writer.Header().Get("HashSHA256"))
 }

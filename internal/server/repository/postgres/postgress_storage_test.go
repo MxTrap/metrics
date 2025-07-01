@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/server/logger"
+	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,6 +117,23 @@ func setupStorage() (*Storage, cleanupFn, error) {
 	return &Storage{db: pgPool, log: log}, cleanupFn, nil
 }
 
+func TestMapCommonToDBMetric(t *testing.T) {
+	storage := &Storage{}
+	metric := models.Metric{
+		ID:    "testGauge",
+		MType: models.Gauge,
+		Value: utils.MakePointer(42.5),
+		Delta: utils.MakePointer[int64](100),
+	}
+	mappedMetric := storage.mapCommonToDBMetric(metric)
+	assert.Equal(t, dbMetric{
+		MType: models.Gauge,
+		Name:  "testGauge",
+		Value: utils.MakePointer(42.5),
+		Delta: utils.MakePointer[int64](100),
+	}, mappedMetric)
+}
+
 func TestNewPostgresStorage(t *testing.T) {
 	pool, cleanup, err := createPool()
 	require.NoError(t, err, "failed to create pool")
@@ -154,9 +172,8 @@ func TestSave(t *testing.T) {
 	metric := models.Metric{
 		ID:    "testGauge",
 		MType: "gauge",
-		Value: new(float64),
+		Value: utils.MakePointer(42.0),
 	}
-	*metric.Value = 42.0
 
 	err = storage.Save(ctx, metric)
 	assert.NoError(t, err, "save should succeed")

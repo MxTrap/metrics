@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"github.com/MxTrap/metrics/internal/agent/models"
+	common "github.com/MxTrap/metrics/internal/common/models"
+	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -23,23 +25,31 @@ func (m *MockMetricsStorage) GetMetrics() models.Metrics {
 }
 
 func TestGetMetrics(t *testing.T) {
-	mockStorage := &MockMetricsStorage{}
-	s := NewMetricsObserverService(mockStorage, 2)
+	storage := &MockMetricsStorage{}
+	service := NewMetricsObserverService(storage, 2)
+	gaugeMetrics := models.NewGaugeMetrics()
+	gaugeMetrics.Set("Alloc", 1000.0)
+	gaugeMetrics.Set("Free", 500.0)
+	gaugeMetrics.Set("TotalMemory", 500.0)
 
-	// Ожидаемые метрики
-	expectedMetrics := models.Metrics{
-		// Пример структуры, зависит от реализации models.Metrics
+	metrics := models.Metrics{
+		Gauge: *gaugeMetrics,
+		Counter: models.CounterMetrics{
+			PollCount: 5,
+		},
 	}
+	storage.On("GetMetrics").Return(metrics)
 
-	// Настройка мока
-	mockStorage.On("GetMetrics").Return(expectedMetrics)
+	result := service.GetMetrics()
 
-	// Вызов метода
-	result := s.GetMetrics()
-
-	// Проверка
-	assert.Equal(t, expectedMetrics, result)
-	mockStorage.AssertCalled(t, "GetMetrics")
+	expected := []common.Metric{
+		{ID: "Alloc", MType: common.Gauge, Value: utils.MakePointer(1000.0)},
+		{ID: "Free", MType: common.Gauge, Value: utils.MakePointer(500.0)},
+		{ID: "TotalMemory", MType: common.Gauge, Value: utils.MakePointer(500.0)},
+		{ID: "PollCount", MType: common.Counter, Delta: utils.MakePointer[int64](5)},
+	}
+	assert.ElementsMatch(t, expected, result)
+	storage.AssertExpectations(t)
 }
 
 func TestRun(t *testing.T) {

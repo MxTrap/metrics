@@ -197,14 +197,15 @@ func (s *MetricsService) Start(ctx context.Context) error {
 }
 
 // Stop останавливает периодическое сохранение, сохраняет метрики в файл и закрывает файловое хранилище.
-func (s *MetricsService) Stop() {
+func (s *MetricsService) Stop(ctx context.Context) error {
 	s.ticker.Stop()
-	err := s.saveToFile(context.Background())
+	err := s.saveToFile(ctx)
 	if err != nil {
-		return
+		return err
 	}
 	err = s.fileStorage.Close()
 	if err != nil {
-		return
+		return err
 	}
+	return nil
 }

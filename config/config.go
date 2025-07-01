@@ -6,23 +6,30 @@ import (
 	"strings"
 )
 
-type HTTPConfig struct {
+type AddrConfig struct {
 	Host string
 	Port int
 }
 
-func NewDefaultConfig() HTTPConfig {
-	return HTTPConfig{
+func NewDefaultHTTPAddr() AddrConfig {
+	return AddrConfig{
 		Host: "localhost",
 		Port: 8080,
 	}
 }
 
-func (c *HTTPConfig) String() string {
+func NewDefaultGRPCAddr() AddrConfig {
+	return AddrConfig{
+		Host: "localhost",
+		Port: 9090,
+	}
+}
+
+func (c *AddrConfig) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-func (c *HTTPConfig) Set(flagValue string) error {
+func (c *AddrConfig) Set(flagValue string) error {
 	fields := strings.SplitN(flagValue, ":", 2)
 	if len(fields) != 2 {
 		return fmt.Errorf("invalid net address: %s", flagValue)

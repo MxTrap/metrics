@@ -24,14 +24,14 @@ func (m *mockLogger) LoggerMiddleware() gin.HandlerFunc {
 }
 
 func TestNewRouter(t *testing.T) {
-	cfg := config.HTTPConfig{
+	cfg := config.AddrConfig{
 		Host: "localhost",
 		Port: 8080,
 	}
 	log := &mockLogger{}
 	key := "testkey"
 
-	server := NewRouter(cfg, log, key, "")
+	server := NewRouter(cfg, log, key, "", "")
 	require.NotNil(t, server, "server should not be nil")
 	assert.NotNil(t, server.Router, "router should not be nil")
 	assert.NotNil(t, server.server, "http server should not be nil")
@@ -48,14 +48,14 @@ func TestNewRouter(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	cfg := config.HTTPConfig{
+	cfg := config.AddrConfig{
 		Host: "localhost",
 		Port: 0,
 	}
 	log := &mockLogger{}
 	key := "testkey"
 
-	server := NewRouter(cfg, log, key, "")
+	server := NewRouter(cfg, log, key, "", "")
 
 	go func() {
 		_ = server.Run()
@@ -76,14 +76,14 @@ func TestStop(t *testing.T) {
 }
 
 func TestNewRouterInvalidTemplatesPath(t *testing.T) {
-	cfg := config.HTTPConfig{
+	cfg := config.AddrConfig{
 		Host: "localhost",
 		Port: 8080,
 	}
 	log := &mockLogger{}
 	key := "testkey"
 
-	server := NewRouter(cfg, log, key, "")
+	server := NewRouter(cfg, log, key, "", "")
 	assert.NotNil(t, server, "server should be created even with invalid templates path")
 
 	server.Router.GET("/test", func(c *gin.Context) {

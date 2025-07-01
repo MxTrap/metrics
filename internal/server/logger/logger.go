@@ -1,8 +1,10 @@
 package logger
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"time"
 )
 
@@ -31,4 +33,22 @@ func (l *Logger) LoggerMiddleware() gin.HandlerFunc {
 			"size", c.Writer.Size(),
 		)
 	}
+}
+
+func (l *Logger) LoggerInterceptor(
+	ctx context.Context,
+	req any, info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (any, error) {
+	start := time.Now()
+	resp, err := handler(ctx, req)
+	duration := time.Since(start)
+	l.Logger.Infoln(
+		"full method", info.FullMethod,
+		"duration", duration,
+		"status", resp,
+		"err", err,
+	)
+
+	return resp, err
 }

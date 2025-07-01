@@ -4,5 +4,6 @@
   "store_interval": "1s",
   "store_file": "/path/to/file.db",
   "database_dsn": "postgres://postgres:admin@localhost:5432/metrics?sslmode=disable",
-  "crypto_key": ""
+  "crypto_key": "",
+  "trusted_subnet": ""
 }

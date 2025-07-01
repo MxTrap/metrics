@@ -30,10 +30,7 @@ func main() {
 	}
 	clientApp := app.NewApp(cfg)
 
-	err = clientApp.Run(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
+	clientApp.Run(ctx)
 	err = http.ListenAndServe(":8081", nil)
 	if err != nil {
 		log.Fatal(err)

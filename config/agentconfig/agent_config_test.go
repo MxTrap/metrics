@@ -62,7 +62,7 @@ func TestNewAgentConfig(t *testing.T) {
 	cfg, err := NewAgentConfig()
 	require.NoError(t, err, "NewAgentConfig should succeed")
 
-	assert.Equal(t, config.HTTPConfig{Host: "192.168.1.1", Port: 8081}, cfg.ServerConfig, "ServerConfig should match env")
+	assert.Equal(t, config.AddrConfig{Host: "192.168.1.1", Port: 8081}, cfg.HTTPServerAddr, "HTTPServerAddr should match env")
 	assert.Equal(t, 20, cfg.ReportInterval, "ReportInterval should match env")
 	assert.Equal(t, 4, cfg.PollInterval, "PollInterval should match env")
 	assert.Equal(t, "env_key", cfg.Key, "Key should match env")
@@ -93,7 +93,7 @@ func TestParseFromFile(t *testing.T) {
 	err = cfg.parseFromFile()
 	require.NoError(t, err, "parseFromFile should succeed")
 
-	assert.Equal(t, config.HTTPConfig{Host: "127.0.0.1", Port: 9090}, cfg.ServerConfig, "ServerConfig should match file")
+	assert.Equal(t, config.AddrConfig{Host: "127.0.0.1", Port: 9090}, cfg.HTTPServerAddr, "HTTPServerAddr should match file")
 	assert.Equal(t, 15, cfg.ReportInterval, "ReportInterval should match file")
 	assert.Equal(t, 3, cfg.PollInterval, "PollInterval should match file")
 	assert.Equal(t, "/tmp/keys/private.pem", cfg.CryptoKey, "CryptoKey should match file")
@@ -170,7 +170,7 @@ func TestParseFromFlags(t *testing.T) {
 	cfg := &AgentConfig{}
 	cfg.parseFromFlags()
 
-	assert.Equal(t, config.HTTPConfig{Host: "localhost", Port: 8082}, cfg.ServerConfig, "ServerConfig should match flags")
+	assert.Equal(t, config.AddrConfig{Host: "localhost", Port: 8082}, cfg.HTTPServerAddr, "HTTPServerAddr should match flags")
 	assert.Equal(t, 25, cfg.ReportInterval, "ReportInterval should match flags")
 	assert.Equal(t, 5, cfg.PollInterval, "PollInterval should match flags")
 	assert.Equal(t, "flag_key", cfg.Key, "Key should match flags")
@@ -200,7 +200,7 @@ func TestParseFromEnv(t *testing.T) {
 	err := cfg.parseFromEnv()
 	require.NoError(t, err, "parseFromEnv should succeed")
 
-	assert.Equal(t, config.HTTPConfig{Host: "192.168.1.1", Port: 8081}, cfg.ServerConfig, "ServerConfig should match env")
+	assert.Equal(t, config.AddrConfig{Host: "192.168.1.1", Port: 8081}, cfg.HTTPServerAddr, "HTTPServerAddr should match env")
 	assert.Equal(t, 20, cfg.ReportInterval, "ReportInterval should match env")
 	assert.Equal(t, 4, cfg.PollInterval, "PollInterval should match env")
 	assert.Equal(t, "env_key", cfg.Key, "Key should match env")

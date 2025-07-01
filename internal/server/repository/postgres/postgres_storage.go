@@ -5,10 +5,9 @@ package postgres
 import (
 	"context"
 	"errors"
-	"time"
-
 	"github.com/MxTrap/metrics/internal/common/models"
 	"github.com/MxTrap/metrics/internal/server/logger"
+	"github.com/MxTrap/metrics/internal/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -56,8 +55,7 @@ func (*Storage) mapDBToCommonMetric(metric dbMetric) models.Metric {
 }
 
 func (*Storage) withRetry(cb func() error) error {
-	const maxRetryAmount = 3
-	for i := 0; i <= maxRetryAmount; i++ {
+	return utils.Retry(func() error {
 		err := cb()
 		if err == nil {
 			return nil
@@ -67,13 +65,9 @@ func (*Storage) withRetry(cb func() error) error {
 		if !errors.As(err, &pgErr) || pgErr.Code != pgerrcode.UniqueViolation {
 			return err
 		}
+		return nil
+	}, 3)
 
-		if i < maxRetryAmount {
-			time.Sleep(time.Duration(1+2*i) * time.Second)
-		}
-	}
-
-	return nil
 }
 
 // Ping проверяет доступность базы данных.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/MxTrap/metrics/config/serverconfig"
 	"github.com/MxTrap/metrics/internal/server/app"
 	"github.com/MxTrap/metrics/internal/utils"
@@ -19,16 +20,19 @@ var (
 func main() {
 	utils.PrintBuildFlags(BuildDate, BuildCommit, BuildVersion)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	cfg, err := serverconfig.NewServerConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	application, err := app.NewApp(cfg)
+
+	application, err := app.NewApp(cfg, ctx)
 	if err != nil {
 		log.Fatal("Application initialization failed: ", err)
 	}
 
-	err = application.Run()
+	err = application.Run(ctx)
 	if err != nil {
 		log.Fatal("Application run failed: ", err)
 	}
@@ -38,5 +42,9 @@ func main() {
 
 	<-stop
 
-	application.GracefulShutdown()
+	err = application.GracefulShutdown(ctx)
+	if err != nil {
+		log.Fatal("Application graceful shutdown failed: ", err)
+		return
+	}
 }

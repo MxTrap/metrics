@@ -6,6 +6,7 @@ import (
 	"context"
 	"github.com/MxTrap/metrics/internal/agent/mappers"
 	"github.com/MxTrap/metrics/internal/agent/models"
+	common "github.com/MxTrap/metrics/internal/common/models"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	"runtime"
@@ -87,7 +88,23 @@ func (s *MetricsObserverService) collectGopsutilMetrics() {
 }
 
 // GetMetrics возвращает все метрики из хранилища.
-// Возвращает структуру models.Metrics, содержащую сохранённые метрики.
-func (s *MetricsObserverService) GetMetrics() models.Metrics {
-	return s.storage.GetMetrics()
+// Возвращает массив models.Metrics, содержащую сохранённые метрики.
+func (s *MetricsObserverService) GetMetrics() common.Metrics {
+	metrics := s.storage.GetMetrics()
+	m := make([]common.Metric, 0, len(metrics.Gauge.Metrics)+1)
+
+	metrics.Gauge.Range(func(key string, value float64) {
+		m = append(m, common.Metric{
+			ID:    key,
+			MType: common.Gauge,
+			Value: &value,
+		})
+	})
+
+	m = append(m, common.Metric{
+		ID:    "PollCount",
+		MType: common.Counter,
+		Delta: &metrics.Counter.PollCount,
+	})
+	return m
 }
